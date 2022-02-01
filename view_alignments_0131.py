@@ -5,7 +5,6 @@ from bokeh.models import ColumnDataSource, Plot, Grid, Range1d
 from bokeh.models.glyphs import Text, Rect
 from bokeh.layouts import gridplot
 
-import pdb
 from scipy.cluster.hierarchy import dendrogram
 from sklearn.datasets import load_iris
 from sklearn.cluster import AgglomerativeClustering

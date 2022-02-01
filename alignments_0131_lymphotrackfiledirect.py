@@ -22,13 +22,8 @@ from streamlit import caching
 
 import altair as alt  
 import bokeh
-
-
 from scipy.cluster.hierarchy import dendrogram, linkage
-import plotly.figure_factory as ff
-
 import pickle
-
 import re
 from Bio.Seq import Seq
 from view_alignments_0131 import *
