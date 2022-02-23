@@ -55,6 +55,7 @@ def view_alignment(aln, useconsensus,fr=1,fontsize="9pt", plot_width=1500,see_se
     
     #seqs = [[rec.seq] * int(np.ceil(int(rec.description))) for rec in (aln)]
     forfileseqs= [ rec.annotations['seq'] for rec in (aln)]
+    forfileinsert = [rec.annotations['insert'] for rec in aln]
     seqs = [rec.seq for rec in (aln)]
     counts = [int(np.ceil(int(rec.description))) for rec in (aln)]
     alnscores = [np.float(rec.name) for rec in (aln)]
@@ -136,6 +137,7 @@ def view_alignment(aln, useconsensus,fr=1,fontsize="9pt", plot_width=1500,see_se
       
       seqs=np.array(seqs)[scipy.cluster.hierarchy.leaves_list(Z2)]
       forfileseqs=np.array(forfileseqs)[scipy.cluster.hierarchy.leaves_list(Z2)]
+      forfileinsert=np.array(forfileinsert)[scipy.cluster.hierarchy.leaves_list(Z2)]
       strc=[str(hhh) if hhh>10 else '' for hhh in counts]
       ugg=ugg[scipy.cluster.hierarchy.leaves_list(Z2)] 
 
@@ -160,7 +162,7 @@ def view_alignment(aln, useconsensus,fr=1,fontsize="9pt", plot_width=1500,see_se
     col2.write('Count of Sequences')
     col2.write(counts[np.argsort(-counts)])
 
-    st.download_button(label='proper order Download',data=convert_df(pd.DataFrame({'sequence': seqs,'sequenceNotformatted': forfileseqs,'numberobserved':counts})),file_name='unique_data_'+str(fr)+'.csv',mime='text/csv') 
+    st.download_button(label='proper order Download',data=convert_df(pd.DataFrame({'sequence': seqs,'sequenceNotformatted': forfileseqs,'numberobserved':counts,'inserts':forfileinsert})),file_name='unique_data_'+str(fr)+'.csv',mime='text/csv') 
 
     seqs_for_view = np.repeat(seqs,countsforlink) 
     incrementforview = int(np.round(seqs_for_view.shape[0]/1000))
