@@ -117,13 +117,15 @@ def remove_nonletter(objectalign):
     seqA=objectalign[0][0]
     seqB=objectalign[0][1]
     seqB_forfile=seqB
+    ind_pass=list()
     skips=re.finditer('-',seqA)
     counter=0
     for jj in skips:
        
         seqB=replace_char_at_index(seqB,jj.start()-counter,'')
+        ind_pass.append(jj.start()-counter)
         counter+=1
-    return seqB, seqB_forfile    
+    return seqB, seqB_forfile,ind_pass    
 
 
 
@@ -215,7 +217,7 @@ class subclone:
         
         partclus['score']=[ii[0].score for ii in ppp1]
         
-        aln=[SeqRecord(seq=jjj[0][0],name=str(jjj[2]),description=str(jjj[1]),id=str(jjj[3]),annotations={'seq':jjj[0][1]}) for jjj in zip(New_seqBs,partclus['count'].tolist(),partclus['score'],partclus['seq'].tolist())]
+        aln=[SeqRecord(seq=jjj[0][0],name=str(jjj[2]),description=str(jjj[1]),id=str(jjj[3]),annotations={'seq':jjj[0][1],'insert':jjj[0][2]}) for jjj in zip(New_seqBs,partclus['count'].tolist(),partclus['score'],partclus['seq'].tolist())]
         aln=[aln[jjj] for jjj in np.argsort(partclus['score'])]
         partclus=partclus.sort_values(['score'])
        
