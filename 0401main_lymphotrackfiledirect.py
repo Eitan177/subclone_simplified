@@ -201,7 +201,7 @@ class subclone:
             ses.reset_index(inplace=True)
             ses.rename(columns={0:'seq'},inplace=True)
         ses_countsum=sum(ses[ses['foundindepKmer']]['count'])
-        ses=ses[ses['foundindepKmer']].sort_values('count',ascending=False)[0:5000]
+        ses=ses[ses['foundindepKmer']].sort_values('count',ascending=False)#[0:5000]
         return(ses_countsum,ses)
     
     def get_partclus_and_aln(self,partclus,clone,abundant_seq):

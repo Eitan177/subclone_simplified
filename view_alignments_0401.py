@@ -147,7 +147,7 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
       strc=[str(hhh) if hhh>10 else '' for hhh in counts]
       ugg=ugg[scipy.cluster.hierarchy.leaves_list(Z2)] 
 
-      R = dendrogram(Z2, orientation="left",leaf_font_size=6,labels=strc)
+      #R = dendrogram(Z2, orientation="left",leaf_font_size=6,labels=strc)
 
       uniqdf= np.array(uniqdf)[scipy.cluster.hierarchy.leaves_list(Z2)]
       
@@ -170,7 +170,7 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
     for_file_seqs_view = np.repeat(forfileseqs,countsforlink)
     ## 03/26
     incrementforview = int(np.round(seqs_for_view.shape[0]/1000))
-    incrementforview = 1
+    #incrementforview = 1
     ## 03/26
 
     if incrementforview > 1:
