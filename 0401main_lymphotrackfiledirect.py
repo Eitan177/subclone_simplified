@@ -1,5 +1,5 @@
 from bdb import set_trace
-from tkinter.messagebox import NO
+#from tkinter.messagebox import NO
 import streamlit as st
 #import neatbio.sequtils as utils
 from Bio.Seq import Seq
