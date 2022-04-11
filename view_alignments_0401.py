@@ -52,7 +52,7 @@ def getlinkage(uniqdf,distancemetric):#, optimal_ordering):
 def convert_df(fr_df):
   return fr_df.to_csv(index=False).encode('utf-8')
 
-def view_alignment(aln, useconsensus,fr=1,fontsize="9pt", plot_width=1500,see_seq=False):
+def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=False):
     """Bokeh sequence alignment view"""
     
     consensus_sequence=useconsensus
@@ -106,7 +106,7 @@ def view_alignment(aln, useconsensus,fr=1,fontsize="9pt", plot_width=1500,see_se
     unique_nnn[ugg=='white']=0
       
     col_score_kms=st.columns(11)
-    st.write('Working on Framework '+str(fr))
+
     # setting distance_threshold=0 ensures we compute the full tree.
     dendo, axis =plt.subplots(1,1,figsize=(3,7))
 
@@ -162,18 +162,15 @@ def view_alignment(aln, useconsensus,fr=1,fontsize="9pt", plot_width=1500,see_se
       uniqtocolors[np.argmax(countview_fordf)]=['purple']*uniqtocolors.shape[1]
 
 
-    col1,col2=st.columns([5,1])
-    col1.write('Sequences')
-    col1.write(seqs[np.argsort(-counts)])
-    col2.write('Count of Sequences')
-    col2.write(counts[np.argsort(-counts)])
+    
     table_of_sequences=pd.DataFrame({'sequence': seqs,'sequenceNotformatted': forfileseqs,'numberobserved':counts,'inserts':forfileinsert.tolist()})
-    st.download_button(label='proper order Download',data=convert_df(table_of_sequences),file_name='unique_data_'+str(fr)+'.csv',mime='text/csv') 
-    st.write(str(sum(counts)))
+    st.download_button(label='proper order Download',data=convert_df(table_of_sequences),file_name='unique_data.csv',mime='text/csv') 
+
     seqs_for_view = np.repeat(seqs,countsforlink) 
+    for_file_seqs_view = np.repeat(forfileseqs,countsforlink)
     ## 03/26
     incrementforview = int(np.round(seqs_for_view.shape[0]/1000))
-    #incrementforview = 1
+    incrementforview = 1
     ## 03/26
 
     if incrementforview > 1:
@@ -182,7 +179,8 @@ def view_alignment(aln, useconsensus,fr=1,fontsize="9pt", plot_width=1500,see_se
       indsview=np.sort(np.unique(indsview))
       seqs_for_view =seqs_for_view[indsview]
       uniqtocolors = uniqtocolors[indsview]
-    
+      for_file_seqs_view = for_file_seqs_view[indsview]
+
     colors_for_view=uniqtocolors.ravel().tolist()
     
     N = len(seqs_for_view[0])
@@ -230,25 +228,24 @@ def view_alignment(aln, useconsensus,fr=1,fontsize="9pt", plot_width=1500,see_se
     p1.yaxis.major_tick_line_width = 0
     
     
-    with st.expander('alignment view for FR '+str(fr)):
-      #p = gridplot([[p1]], toolbar_location='below')
-      #cola,colb=st.columns([2,7])
-        
-      #cola.pyplot(dendo)#, height=21)
-      
-      #colb.bokeh_chart(p)
+    with st.expander('alignment view'):
 
       # 03/31 Kevins clustering and feature addition
       table_of_sequences_with_clusters_and_features = KevinsFunction(table_of_sequences)
-      table_of_outliers=table_of_sequences_with_clusters_and_features.groupby(['closest match']).apply(lambda x: np.array((x['sequence'][x['outliers']==1].iloc[0],sum(x['numberobserved']))))
-      table_w_sequence_and_count= pd.DataFrame({'seq':np.vstack(table_of_outliers).T[0],'sum of counts':np.vstack(table_of_outliers).T[1]})
       
-      st.download_button(label='subclones',data=convert_df(table_w_sequence_and_count),file_name='subclonetable_'+str(fr)+'.csv',mime='text/csv') 
-    
+      table_of_outliers=table_of_sequences_with_clusters_and_features.groupby(['closest match']).apply(lambda x: np.array((x['sequence'][x['outliers']==1].iloc[0],sum(x['numberobserved']),x['index_mismatch'][x['outliers']==1].iloc[0],\
+        x['homology_against_mother_clone'][x['outliers']==1].iloc[0]  )))
+      table_w_sequence_and_count= pd.DataFrame({'seq':np.vstack(table_of_outliers).T[0],'sum of counts':np.vstack(table_of_outliers).T[1],\
+        'discrepant_positions': np.vstack(table_of_outliers).T[2],'mother_clone_distance':np.vstack(table_of_outliers).T[3]})
+      
+        
       make_alignmentplotwithcluster(table_of_sequences_with_clusters_and_features,consensus_sequence,reorder=False)
 
       make_alignmentplotwithcluster(table_of_sequences_with_clusters_and_features,consensus_sequence,reorder=True)
-    
+      st.write('subclones')
+      st.write(table_w_sequence_and_count)
+      st.download_button(label='dendrogram ordered sequences',data=convert_df(table_of_sequences_with_clusters_and_features),file_name='dendrogramordered.csv',mime='text/csv')
+      st.download_button(label='subclones',data=convert_df(table_w_sequence_and_count),file_name='subclonetable_'+str(fr)+'.csv',mime='text/csv') 
 
     return [sum(counts),table_w_sequence_and_count]
 
