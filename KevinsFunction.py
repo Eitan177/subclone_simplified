@@ -2,10 +2,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import sklearn
 from sklearn.svm import OneClassSVM
+from scipy.signal import savgol_filter, find_peaks
 from sklearn.cluster import DBSCAN
 from Bio import pairwise2
 import numpy as np
-import pdb
+
 
 def file_path_generation(sample_number):
     """
@@ -83,7 +84,7 @@ def trinucleotide(data, mother_sequence):
         else:
             insert_positions = row['inserts'][1:-1].split(',')
             for insert_position in insert_positions:
-                if int(insert_position) > len(mother_sequence_trinucleotide) - 1 :#or int(insert_position) < 8:
+                if int(insert_position) > len(mother_sequence_trinucleotide) - 1:
                     insert_count += 0
                 else:
                     if mother_sequence_trinucleotide[int(insert_position)] == 1:
@@ -101,13 +102,33 @@ def get_total_deletions(data):
     """
     return data.sequence.str.count('-')
 
-def get_index_mismatch(data, mother_sequence):
-    index_mismatch = []
-    sequences = data['sequence'].tolist()
-    for sequence in sequences:
-        index_mismatch.append([i for i in range(len(sequence)) if sequence[i] != mother_sequence[i]])
-    return index_mismatch
-    
+
+def suspicious_mismatch(differences):
+    """
+    Initially creates a suspicious mismatch to find the max significant homology differences between
+    rows immediately above and below. Final Homology difference scans for two consecutive numbers showing up indicating
+    possible artifact. Converts point to min difference in order to remove artifact
+
+    :param differences:
+    :return: Suspicious mismatch: Greatest distance between the row above and below.
+    """
+    suspicious_mismatch_number = [abs(differences[0] - differences[1])]
+    for differences_position in range(1, len(differences) - 1):
+        suspicious_mismatch_number.append(max(abs(differences[differences_position] - differences[differences_position - 1]), abs(differences[differences_position] - differences[differences_position + 1])))
+    suspicious_mismatch_number.append(abs(differences[len(differences) - 1] - differences[len(differences) - 2]))
+
+    final_suspicious_mismatch_number = suspicious_mismatch_number.copy()
+
+    for count in range(1, len(suspicious_mismatch_number) - 1):
+        if suspicious_mismatch_number[count - 1] == suspicious_mismatch_number[count] and suspicious_mismatch_number[count] > 5:
+            if differences[count - 1] > differences[count]:
+                final_suspicious_mismatch_number[count] = min(abs(differences[count] - differences[count - 1]), abs(differences[count] - differences[count + 1]))
+        if suspicious_mismatch_number[count + 1] == suspicious_mismatch_number[count] and suspicious_mismatch_number[count] > 5:
+            if differences[count + 1] > differences[count]:
+                final_suspicious_mismatch_number[count] = min(abs(differences[count] - differences[count - 1]), abs(differences[count] - differences[count + 1]))
+    return final_suspicious_mismatch_number
+
+
 def homology_metrics(data, row_of_max_observed, mother_sequence):
     """
     :param data: All data from clone seer
@@ -146,8 +167,50 @@ def homology_metrics(data, row_of_max_observed, mother_sequence):
         else:
             second_half_value.append(count)
     new_difference = first_half_value[::-1] + second_half_value
-    data['contiguous_homology_against_mother_clone'] = new_difference  # New Variable Name
-    return differences, new_difference
+    suspicious_mismatch_number = suspicious_mismatch(differences)
+    return differences, new_difference, suspicious_mismatch_number
+
+
+def get_index_mismatch(data, mother_sequence):
+    """
+    Gets the indexes of mismatches between mother clone and the sequence being analyzed
+    :param data: Clone seer file
+    :param mother_sequence: The most abundant sequence
+    :return: A list of list of indexes that are mismatches
+    """
+    index_mismatch = []
+    sequences = data['sequence'].tolist()
+    for sequence in sequences:
+        index_mismatch.append([i for i in range(len(sequence)) if sequence[i] != mother_sequence[i]])
+    return index_mismatch
+
+
+def is_somatic_hypermutation(data, mother_sequence):
+    """
+    Gets all of the mismatch indexes between a data sequence and indexes and then shifts frames of 5 in order to find
+    the difference between the 1st and 5th indexes to see if it's less than 20
+
+    :param data: All data from clone seer
+    :param mother_sequence: The most abundant sequence
+    :return: An array of whether or not it is a somatic hypermutation. 0 is not a hypermutation. 1 is a hypermutation
+    """
+
+    somatic_hypermutation_result = []
+    sequences = data['sequence'].tolist()
+    for individual_sequence in sequences:
+        mismatch_positions = []
+        for sequence_character_position in range(len(individual_sequence)):
+            if individual_sequence[sequence_character_position] != mother_sequence[sequence_character_position]:
+                mismatch_positions.append(sequence_character_position)
+        if len(mismatch_positions) < 5:
+            somatic_hypermutation_result.append(0)
+        else:
+            somatic_hypermutation = 0  # False
+            for mismatch_set_of_3_start_index in range(len(mismatch_positions) - 2):
+                if mismatch_positions[mismatch_set_of_3_start_index + 2] - mismatch_positions[mismatch_set_of_3_start_index] <= 20:
+                    somatic_hypermutation = 1  # True
+            somatic_hypermutation_result.append(somatic_hypermutation)
+    return somatic_hypermutation_result
 
 
 def new_metrics(data):
@@ -157,27 +220,50 @@ def new_metrics(data):
     :param data: All data from Clone Seer file
     :return: data: Data with new metrics columns attached
     """
-    
+
     # Mother Clone Identification
     row_of_max_observed = data['numberobserved'].idxmax()
     mother_sequence = data['sequence'][row_of_max_observed]
 
-
-    
     # Number of deletions that appear in each sequence
     data['deletion_count'] = get_total_deletions(data)
-    
+
     data['index_mismatch'] = get_index_mismatch(data, mother_sequence)
 
     # Mismatches, deletions, and insertions in trinucleotide regions
     data['mismatch_in_trinucleotide'], data['deletion_in_trinucleotide'], data['insertion_in_trinucleotide'] \
         = trinucleotide(data, mother_sequence)
     # Calculate homology differences and contiguous homology block differences
-    data['homology_against_mother_clone'], data['contiguous_homology_against_mother_clone'] = homology_metrics(data, row_of_max_observed, mother_sequence)
+    data['homology_against_mother_clone'], data['contiguous_homology_against_mother_clone'], data[
+        'suspicious_mismatch'] = homology_metrics(data, row_of_max_observed, mother_sequence)
+
+    data['somatic_mutations'] = is_somatic_hypermutation(data, mother_sequence)
+
     return data, row_of_max_observed, mother_sequence
 
 
-def outlier_detection(data):
+def add_in_outlier_from_suspicious_mismatch(data, outliers_list):
+    suspicious_mismatch_results = data['suspicious_mismatch'].tolist()
+    smoothed_results = savgol_filter(suspicious_mismatch_results, window_length=15, polyorder=1)
+    peaks, properties = find_peaks(smoothed_results, prominence=1)
+    # Generates out plot for analysis
+    # print(smoothed_results)
+    # plt.plot(list(np.arange(0, len(smoothed_results))), smoothed_results)
+    # plt.plot(list(np.arange(0, len(smoothed_results))), suspicious_mismatch_results)
+    # plt.plot(peaks, smoothed_results[peaks], "x")
+    # plt.show()
+
+    new_outliers_list = outliers_list.copy()
+
+    for individual_peak in peaks:
+        search_area = suspicious_mismatch_results[individual_peak - 7: individual_peak + 7]
+        max_value = max(search_area)
+        max_index = search_area.index(max_value)
+        new_outliers_list[(individual_peak + max_index - 7)] = 1
+    return new_outliers_list
+
+
+def outlier_detection(file):
     """
     Takes in a file and finds all the outliers that can be subclones.
     1. Apply DBScan to all sequences except those who have a deletion or insertion on the trinucelotide and find the subclones
@@ -189,37 +275,40 @@ def outlier_detection(data):
     :return: Array filled with likely subclones and mother clone in sequential order
     """
 
-    #data = pd.read_csv(file)
+    data = pd.read_csv(file)
     data_with_new_metrics, row_of_mother_clone, mother_clone = new_metrics(data)
 
     data_without_mother_clone = data_with_new_metrics.drop(index=row_of_mother_clone)
     data_with_insertion = data_without_mother_clone.loc[data_without_mother_clone['insertion_in_trinucleotide'] != 0]
     data_with_deletion = data_without_mother_clone.loc[data_without_mother_clone['deletion_in_trinucleotide'] != 0]
 
-    model_1 = sklearn.cluster.DBSCAN(eps=200, min_samples=10).fit(data_without_mother_clone[['numberobserved', 'contiguous_homology_against_mother_clone']])
-    colors_1 = model_1.labels_
-    plt.scatter(data_without_mother_clone["numberobserved"], data_without_mother_clone['insertion_in_trinucleotide'], c=colors_1)
-    plt.xlabel("number of times observed")
-    plt.ylabel("contiguous_homology_against_mother_clone")
+    model_1 = sklearn.cluster.DBSCAN(eps=200, min_samples=10).fit(
+        data_without_mother_clone[['numberobserved', 'contiguous_homology_against_mother_clone']])
+    #colors_1 = model_1.labels_
+    #plt.scatter(data_without_mother_clone["numberobserved"], data_without_mother_clone['insertion_in_trinucleotide'],c=colors_1)
+    #plt.xlabel("number of times observed")
+    #plt.ylabel("contiguous_homology_against_mother_clone")
 
     outliers_list = np.zeros(len(data.index))
     outliers_list[row_of_mother_clone] = 1
     outliers_1 = data_without_mother_clone[model_1.labels_ == -1]
     for outlier_count in outliers_1.index.tolist():
         outliers_list[outlier_count] = 1
-    # print(outliers_1['sequenceNotformatted'])
 
     df_insert_mean = data_with_insertion['numberobserved'].mean()
     df_insert_std = data_with_insertion['numberobserved'].std()
     df_deletion_mean = data_with_deletion['numberobserved'].mean()
     df_deletion_std = data_with_deletion['numberobserved'].std()
-    df_insert_sequenceNotFormatted = data_with_insertion.loc[data_with_insertion['numberobserved'] >= df_insert_mean + df_insert_std]
-    df_with_deletion_sequenceNotFormatted = data_with_deletion.loc[data_with_deletion['numberobserved'] >= df_deletion_mean + df_deletion_std]
+    df_insert_sequenceNotFormatted = data_with_insertion.loc[
+        data_with_insertion['numberobserved'] >= df_insert_mean + df_insert_std]
+    df_with_deletion_sequenceNotFormatted = data_with_deletion.loc[
+        data_with_deletion['numberobserved'] >= df_deletion_mean + df_deletion_std]
 
     for outlier_count in df_insert_sequenceNotFormatted['sequenceNotformatted'].index.tolist():
         outliers_list[outlier_count] = 1
     for outlier_count in df_with_deletion_sequenceNotFormatted['sequenceNotformatted'].index.tolist():
         outliers_list[outlier_count] = 1
+    outliers_list = add_in_outlier_from_suspicious_mismatch(data_with_new_metrics, outliers_list)
     data['outliers'] = outliers_list
     outlier_sequential = []
     for position in range(len(outliers_list)):
@@ -227,112 +316,55 @@ def outlier_detection(data):
             outlier_sequential.append(data['sequenceNotformatted'].iloc[position])
     return data, outlier_sequential
 
-"""
-def merge_longer_sequence_with_shorter():
-
-
-def merge_shorter_sequence_with_longer():
-
-
-def merge_outliers(outliers):
-    merges = []
-    for framework_count_1 in range(3):
-        for framework_count_2 in range(3):
-            for sequence_1 in framework_count_1:
-                if framework_count_1 < framework_count_2:
-                    
-
-
-
-def create_main_subclone_family(outliers):
-    allele_1_original = [np.unique(outliers[0]), np.unique(outliers[1]), np.unique(outliers[2])]
-    subclones = []
-    print(allele_1_original[0])
-    fr2_used = np.zeros(len(allele_1_original[1]))
-    for potential_outlier_1 in range(len(allele_1_original[0])):
-        not_appended = True
-        for potential_outlier_2 in range(len(allele_1_original[1])):
-            fr1seq = allele_1_original[0][potential_outlier_1].replace('-', "")
-            fr2seq = allele_1_original[1][potential_outlier_2].replace('-', "")
-            alignments = pairwise2.align.globalxx(fr1seq, fr2seq, score_only=True)
-            if len(fr2seq) - alignments <= 2:
-                subclones.append([fr1seq, fr2seq])
-                not_appended = False
-                fr2_used[potential_outlier_2] = 1
-        if not_appended:
-            subclones.append([allele_1_original[0][potential_outlier_1].replace('-', "")])
-
-    for potential_outlier_2 in range(len(allele_1_original[1])):
-        if fr2_used[potential_outlier_2] == 0:
-            subclones.append([allele_1_original[1][potential_outlier_2].replace('-', "")])
-
-    subclones_final = []
-    subclones_used = np.zeros(len(subclones))
-    for potential_outlier_3 in range(len(allele_1_original[2])):
-        not_appended = True
-        fr3seq = outliers[2][potential_outlier_3].replace('-', "")
-        if fr3seq == 'ACACGGCTGTGTATTACTGTGCGAGAGATCTGAGGAACGAAATGGCGGGGGATGGTGCGGGGAGTTAGTCGACTACTACTACTACTACTACATGTACGTCTGGGGCAAAGGGACCAC':
-            print('Hi')
-        for potential_outlier_4 in range(len(subclones)):
-            alignments1 = pairwise2.align.globalxx(subclones[potential_outlier_4][0], fr3seq, score_only=True)
-            # print(len(fr3seq) - alignments1)
-            if len(fr3seq) - alignments1 <= 2:
-                if fr3seq == 'ACACGGCTGTGTATTACTGTGCGAGAGATCTGAGGAACGAAATGGCGGGGGATGGTGCGGGGAGTTAGTCGACTACTACTACTACTACTACATGTACGTCTGGGGCAAAGGGACCAC':
-                    print('Hi')
-                '''
-                if len((subclones[potential_outlier_4])) == 2:
-                    alignments2 = pairwise2.align.globalxx(subclones[potential_outlier_4][1], fr3seq, score_only=True)
-                    if len(fr3seq) - alignments2 <= 2:
-                        subclones_final.append([subclones[potential_outlier_4][0], subclones[potential_outlier_4][1], fr3seq])
-                        subclones_used[potential_outlier_4] = 1
-                        not_appended = False
-                else:
-                    if fr3seq == 'ACACGGCTGTGTATTACTGTGCGAGAGATCTGAGGAACGAAATGGCGGGGGATGGTGCGGGGAGTTAGTCGACTACTACTACTACTACTACATGTACGTCTGGGGCAAAGGGACCAC':
-                        print('Hi')
-                    subclones_final.append([subclones[potential_outlier_4][0], fr3seq])
-                    subclones_used[potential_outlier_4] = 1
-                    not_appended = False
-                
-        if not_appended:
-            subclones_final.append([allele_1_original[2][potential_outlier_3].replace('-', "")])
-    for potential_outlier_4 in range(len(subclones)):
-        if subclones[potential_outlier_4] == 0:
-            subclones_final.append([subclones[potential_outlier_4]])
-    print(subclones_final)
-'''
-"""
-
 
 def partition(data, outliers):
+    """
+    Takes the data and for each sequence assigns a set of alignment score (one against each outlier) and then picks the one
+    that has the least difference between the sequence length and the target sequence.
+    :param data: Clone Seer Data
+    :param outliers: A
+    :return: Data with a column for closest match
+    """
+
     sequences = data['sequenceNotformatted'].tolist()
-    outlier_position = list(range(len(outliers))) # Corresponding class of outlier sequence
-    outlier_index = []   # Corresponding Outlier Index Value in the actual outliers
+    sequences_formatted = data['sequence'].tolist()
+    outlier_position = list(range(len(outliers)))  # Corresponding class of outlier sequence
+    outlier_index = []  # Corresponding Outlier Index Value in the actual outliers
     for individual_outlier in outliers:
         outlier_index.append(data.index[data['sequenceNotformatted'] == individual_outlier])
-        
     closest_match = []
     count = 0
     for sequence in sequences:
         outlier_score = len(sequence)
         best_outlier_position = -1
         outlier_seq_pos = 2 * len(sequences)
+        sequence_no_dash = sequence.replace("-", "")
         for outlier_count in range(len(outliers)):
-            alignments = pairwise2.align.globalms(sequence.replace("-", ""), outliers[outlier_count].replace("-", ""), 1, -1, -5, 0, score_only=True)
-            if len(sequence) - alignments < outlier_score:
-                outlier_score = len(sequence) - alignments
+            alignments = pairwise2.align.globalms(sequence_no_dash, outliers[outlier_count].replace("-", ""), 1, -1, -1, 0, score_only=True)
+            if len(sequence_no_dash) - alignments < outlier_score:
+                outlier_score = len(sequence_no_dash) - alignments
                 best_outlier_position = outlier_position[outlier_count]
                 outlier_seq_pos = outlier_index[outlier_count]
-            if len(sequence) - alignments == outlier_score:
+            if len(sequence_no_dash) - alignments == outlier_score:
                 if outlier_seq_pos - count > outlier_position[outlier_count] - count:
                     best_outlier_position = outlier_position[outlier_count]
                     outlier_seq_pos = outlier_index[outlier_count]
-        if best_outlier_position == -1:
-            pdb.set_trace()       
         closest_match.append(best_outlier_position)
         count += 1
     data['closest match'] = closest_match
-    return data
 
+    all_outlier_scores = []
+    for sequence in sequences_formatted:
+        all_sequence_outlier_scores = []
+        sequence_no_dash = sequence.replace("-", "")
+        for outlier_count in range(len(outliers)):
+            alignment_score_no_gaps = pairwise2.align.globalms(sequence.replace("-", ""),
+                                                               outliers[outlier_count].replace("-", ""), 1, -1, 0, 0,
+                                                               score_only=True)
+            all_sequence_outlier_scores.append(len(sequence_no_dash) - alignment_score_no_gaps)
+        all_outlier_scores.append(all_sequence_outlier_scores)
+    data['all_scores'] = all_outlier_scores
+    return data
 
 
 def KevinsFunction(table_of_sequences):
