@@ -281,7 +281,7 @@ def outlier_detection(file):
     data_without_mother_clone = data_with_new_metrics.drop(index=row_of_mother_clone)
     data_with_insertion = data_without_mother_clone.loc[data_without_mother_clone['insertion_in_trinucleotide'] != 0]
     data_with_deletion = data_without_mother_clone.loc[data_without_mother_clone['deletion_in_trinucleotide'] != 0]
-
+    """
     model_1 = sklearn.cluster.DBSCAN(eps=200, min_samples=10).fit(
         data_without_mother_clone[['numberobserved', 'contiguous_homology_against_mother_clone']])
     #colors_1 = model_1.labels_
@@ -294,6 +294,25 @@ def outlier_detection(file):
     outliers_1 = data_without_mother_clone[model_1.labels_ == -1]
     for outlier_count in outliers_1.index.tolist():
         outliers_list[outlier_count] = 1
+    """
+
+    outlier_from_number_observed = data_with_new_metrics['numberobserved'].tolist()
+    smoothed_results = savgol_filter(outlier_from_number_observed, window_length=30, polyorder=1)
+    peaks, properties = find_peaks(smoothed_results, prominence=1)
+    # Generates out plot for analysis
+    # print(smoothed_results)
+    plt.plot(list(np.arange(0, len(smoothed_results))), smoothed_results)
+    plt.plot(list(np.arange(0, len(smoothed_results))), outlier_from_number_observed)
+    plt.plot(peaks, smoothed_results[peaks], "x")
+    plt.show()
+
+    outliers_list = np.zeros(len(data.index))
+    outliers_list[row_of_mother_clone] = 1
+    for individual_peak in peaks:
+        search_area = outlier_from_number_observed[individual_peak - 7: individual_peak + 7]
+        max_value = max(search_area)
+        max_index = search_area.index(max_value)
+        outliers_list[(individual_peak + max_index - 7)] = 1
 
     df_insert_mean = data_with_insertion['numberobserved'].mean()
     df_insert_std = data_with_insertion['numberobserved'].std()
@@ -365,6 +384,43 @@ def partition(data, outliers):
         all_outlier_scores.append(all_sequence_outlier_scores)
     data['all_scores'] = all_outlier_scores
     return data
+
+
+def process_fasta_from_ebi(fasta_file_path, outliers):
+    """
+    The function takes the fasta_file generated from EBI listing the V genes and matches it up against the outliers
+    :param fasta_file_path:
+    :param outliers:
+    :return:
+    """
+
+    fasta_file = open(fasta_file_path, "r")
+    ighv_database = {}
+    current_key = ""
+    current_sequence = ""
+    for line in fasta_file:
+        if line[0] == '>':
+            split_title_line = line.split("|")
+            ighv_database[current_key] = current_sequence.replace("\n", "").replace(".", "").upper()
+            current_key = split_title_line[1]
+            current_sequence = ""
+        else:
+            current_sequence = current_sequence + line
+    del ighv_database[""]
+    corresponding_ighv = []
+    for outlier in outliers:
+        min_score = 100000000000
+        min_score_key = ""
+        print("new")
+        for key in ighv_database.keys():
+            alignment_score = pairwise2.align.globalms(outlier, ighv_database[key], 1, -1, 0, 0, score_only=True)
+            if (len(outlier) - alignment_score) < min_score:
+                min_score = (len(outlier) - alignment_score)
+                print(min_score)
+                min_score_key = key
+                print(min_score_key)
+        corresponding_ighv.append(min_score_key)
+    return corresponding_ighv
 
 
 def KevinsFunction(table_of_sequences):
