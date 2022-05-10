@@ -1,3 +1,5 @@
+from random import random
+
 import numpy as np
 from bokeh.plotting import figure, show
 from bokeh.plotting import figure
@@ -231,10 +233,12 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
     with st.expander('alignment view'):
 
       # 03/31 Kevins clustering and feature addition
-      table_of_sequences_with_clusters_and_features = KevinsFunction(table_of_sequences)
-      
-      table_of_outliers=table_of_sequences_with_clusters_and_features.groupby(['closest match']).apply(lambda x: np.array((x['sequence'][x['outliers']==1].iloc[0],sum(x['numberobserved']),x['index_mismatch'][x['outliers']==1].iloc[0],\
-        x['homology_against_mother_clone'][x['outliers']==1].iloc[0]  )))
+      # table_of_sequences_with_clusters_and_features = KevinsFunction(table_of_sequences)
+      # table_of_sequences_with_clusters_and_features.to_csv("R540_FR1.csv")
+      table_of_sequences_with_clusters_and_features = pd.read_csv("R540_FR1.csv")
+
+      table_of_outliers=table_of_sequences_with_clusters_and_features.groupby(['closest match']).apply(lambda x: np.array((x['sequence'][x['outliers'] > 0].iloc[0],sum(x['numberobserved']),x['index_mismatch'][x['outliers'] > 0].iloc[0],\
+        x['homology_against_mother_clone'][x['outliers'] > 0].iloc[0])))
       table_w_sequence_and_count= pd.DataFrame({'seq':np.vstack(table_of_outliers).T[0],'sum of counts':np.vstack(table_of_outliers).T[1],\
         'discrepant_positions': np.vstack(table_of_outliers).T[2],'mother_clone_distance':np.vstack(table_of_outliers).T[3]})
       

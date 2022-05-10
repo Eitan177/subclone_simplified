@@ -56,19 +56,23 @@ def make_alignmentplotwithcluster(aln_pd, useconsensus,fr=1,fontsize="9pt", plot
     elif len(set(alnscores)) >= 14 and len(set(alnscores)) <= 22:
         subclonecolors=Viridis[11]+Cividis[len(set(alnscores))-11]
     elif len(set(alnscores)) > 22 and len(set(alnscores))<= 24:  
-        subclonecolors=Magma[11]+Viridis[11]+Cividis[3][0:len(set(alnscores))-22]      
-    elif  len(set(alnscores)) >= 24:
-        subclonecolors=Magma[11]+Viridis[11]+Cividis[len(set(alnscores))-22]    
+        subclonecolors=Magma[11]+Viridis[11]+Cividis[3][0:len(set(alnscores))-22]
+    elif len(set(alnscores)) >= 24 and len(set(alnscores)) <= 32:
+        subclonecolors = Magma[11] + Viridis[11] + Cividis[len(set(alnscores)) - 22]
+    elif len(set(alnscores)) >= 33:
+        cc = Magma[11] + Viridis[11] + Cividis[10] + Magma[11] + Viridis[11] + Cividis[10] + Magma[11] + Viridis[11] + \
+         Cividis[10] + Magma[11] + Viridis[11] + Cividis[10] + Magma[11] + Viridis[11] + Cividis[10] + Magma[11] + Viridis[11] + Cividis[10] + Magma[11] + Viridis[11] + Cividis[10] + Magma[11] + Viridis[11]
+        subclonecolors = cc[0:len(set(alnscores))]
     else:
-        subclonecolors=Cividis[3][0:len(set(alnscores))]
+        subclonecolors = Cividis[3][0:len(set(alnscores))]
      
     colors=get_colors_consensus(seqs,consensus_sequence)
     
     gg=np.array(colors).reshape((-1, len(seqs[0])))
     
     
-
-    subclonecolormatch= np.repeat([subclonecolors[int(ii)] for ii in alnscores],5).reshape(-1,5)
+    pdb.set_trace()
+    subclonecolormatch = np.repeat([subclonecolors[int(ii)] for ii in alnscores],5).reshape(-1,5)
     
 
     gg=np.hstack((gg,subclonecolormatch))
