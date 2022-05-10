@@ -259,7 +259,7 @@ def add_in_outlier_from_suspicious_mismatch(data, outliers_list):
         search_area = suspicious_mismatch_results[individual_peak - 7: individual_peak + 7]
         max_value = max(search_area)
         max_index = search_area.index(max_value)
-        new_outliers_list[(individual_peak + max_index - 7)] = 1
+        new_outliers_list[(individual_peak + max_index - 7)] = 2
     return new_outliers_list
 
 
@@ -301,10 +301,10 @@ def outlier_detection(file):
     peaks, properties = find_peaks(smoothed_results, prominence=1)
     # Generates out plot for analysis
     # print(smoothed_results)
-    plt.plot(list(np.arange(0, len(smoothed_results))), smoothed_results)
-    plt.plot(list(np.arange(0, len(smoothed_results))), outlier_from_number_observed)
-    plt.plot(peaks, smoothed_results[peaks], "x")
-    plt.show()
+    # plt.plot(list(np.arange(0, len(smoothed_results))), smoothed_results)
+    # plt.plot(list(np.arange(0, len(smoothed_results))), outlier_from_number_observed)
+    # plt.plot(peaks, smoothed_results[peaks], "x")
+    # plt.show()
 
     outliers_list = np.zeros(len(data.index))
     outliers_list[row_of_mother_clone] = 1
@@ -330,27 +330,38 @@ def outlier_detection(file):
     outliers_list = add_in_outlier_from_suspicious_mismatch(data_with_new_metrics, outliers_list)
     data['outliers'] = outliers_list
     outlier_sequential = []
+    outlier_type = []
     for position in range(len(outliers_list)):
         if outliers_list[position] == 1:
             outlier_sequential.append(data['sequenceNotformatted'].iloc[position])
-    return data, outlier_sequential
+            outlier_type.append(1)
+        if outliers_list[position] == 2:
+            outlier_sequential.append(data['sequenceNotformatted'].iloc[position])
+            outlier_type.append(2)
+    return data, outlier_sequential, outlier_type
 
 
-def partition(data, outliers):
+def partition(data, outliers, outlier_type):
     """
-    Takes the data and for each sequence assigns a set of alignment score (one against each outlier) and then picks the one
-    that has the least difference between the sequence length and the target sequence.
-    :param data: Clone Seer Data
-    :param outliers: A
-    :return: Data with a column for closest match
+        Takes the data and for each sequence assigns a set of alignment score (one against each outlier) and then picks the one
+        that has the least difference between the sequence length and the target sequence.
+        :param data: Clone Seer Data
+        :param outliers: All of the outliers
+        :param outlier_type: The outlier type. 1 = Outlier from trinucleotide or num observed. 2 = somatic hypermutation
+        :return: Data with a column for closest match
     """
-
     sequences = data['sequenceNotformatted'].tolist()
-    sequences_formatted = data['sequence'].tolist()
-    outlier_position = list(range(len(outliers)))  # Corresponding class of outlier sequence
-    outlier_index = []  # Corresponding Outlier Index Value in the actual outliers
-    for individual_outlier in outliers:
-        outlier_index.append(data.index[data['sequenceNotformatted'] == individual_outlier])
+
+    # First Pass utilizing only outliers coming from num observed filter
+    initial_outlier_class = [i for i, x in enumerate(outlier_type) if x == 1]  # Gets all of the indexes of outliers that came from the original num observed filter
+    initial_outlier_class_corresponding_sequence = [] # Corresponding sequence to num observed filter outliers
+    for individual_outlier_class in initial_outlier_class:
+        initial_outlier_class_corresponding_sequence.append(outliers[individual_outlier_class])
+    initial_outlier_index = []  # Corresponding Outlier Index Value in the actual outliers
+    for individual_outlier in initial_outlier_class_corresponding_sequence:
+        initial_outlier_index.append(data.index[data['sequenceNotformatted'] == individual_outlier])
+
+    # First pass matching
     closest_match = []
     count = 0
     for sequence in sequences:
@@ -358,42 +369,44 @@ def partition(data, outliers):
         best_outlier_position = -1
         outlier_seq_pos = 2 * len(sequences)
         sequence_no_dash = sequence.replace("-", "")
-        for outlier_count in range(len(outliers)):
-            alignments = pairwise2.align.globalms(sequence_no_dash, outliers[outlier_count].replace("-", ""), 1, -1, -1, 0, score_only=True)
+        for outlier_count in range(len(initial_outlier_class_corresponding_sequence)):
+            alignments = pairwise2.align.globalms(sequence_no_dash, initial_outlier_class_corresponding_sequence[outlier_count].replace("-", ""), 1, -1, -1, 0, score_only=True)
             if len(sequence_no_dash) - alignments < outlier_score:
                 outlier_score = len(sequence_no_dash) - alignments
-                best_outlier_position = outlier_position[outlier_count]
-                outlier_seq_pos = outlier_index[outlier_count]
+                best_outlier_position = initial_outlier_class[outlier_count]
+                outlier_seq_pos = initial_outlier_index[outlier_count]
             if len(sequence_no_dash) - alignments == outlier_score:
-                if outlier_seq_pos - count > outlier_position[outlier_count] - count:
-                    best_outlier_position = outlier_position[outlier_count]
-                    outlier_seq_pos = outlier_index[outlier_count]
+                if outlier_seq_pos - count > initial_outlier_class[outlier_count] - count:
+                    best_outlier_position = initial_outlier_class[outlier_count]
+                    outlier_seq_pos = initial_outlier_class[outlier_count]
         closest_match.append(best_outlier_position)
         count += 1
-    data['closest match'] = closest_match
 
-    all_outlier_scores = []
-    for sequence in sequences_formatted:
-        all_sequence_outlier_scores = []
-        sequence_no_dash = sequence.replace("-", "")
-        for outlier_count in range(len(outliers)):
-            alignment_score_no_gaps = pairwise2.align.globalms(sequence.replace("-", ""),
-                                                               outliers[outlier_count].replace("-", ""), 1, -1, 0, 0,
-                                                               score_only=True)
-            all_sequence_outlier_scores.append(len(sequence_no_dash) - alignment_score_no_gaps)
-        all_outlier_scores.append(all_sequence_outlier_scores)
-    data['all_scores'] = all_outlier_scores
+    # Grabbing original index for second pass. Takes 20 above and 20 below for each outlier and sees if class needs to be adjusted with better score
+    outlier_index = []  # Corresponding Outlier Index Value in the actual outliers
+    for individual_outlier in outliers:
+        outlier_index.append(data.loc[data['sequenceNotformatted'] == individual_outlier].index.values)
+    outlier_class = 0
+    for individual_outlier_index in outlier_index:
+        for search_area in range(max(0, individual_outlier_index[0] - 20), min(individual_outlier_index[0] + 21, len(sequences))):
+            new_score = pairwise2.align.globalms(sequences[search_area].replace("-", ""), sequences[individual_outlier_index[0]].replace("-", ""), 1, -1, -1, 0, score_only=True)
+            old_score = pairwise2.align.globalms(sequences[search_area].replace("-", ""), outliers[closest_match[search_area]].replace("-", ""), 1, -1, -1, 0, score_only=True)
+            if new_score > old_score:
+                closest_match[search_area] = outlier_class
+        outlier_class += 1
+    data['closest match'] = closest_match
     return data
 
 
-def process_fasta_from_ebi(fasta_file_path, outliers):
+def process_fasta_from_ebi(fasta_file_path, data):
     """
     The function takes the fasta_file generated from EBI listing the V genes and matches it up against the outliers
-    :param fasta_file_path:
-    :param outliers:
-    :return:
+    :param fasta_file_path: The path to the fasta file containing all of the genes
+    :param data: Data with all of the metrics
+    :return: Data that has a new column denoting V-gene
     """
 
+    # Builds the IGHV gene database from the EBI file
     fasta_file = open(fasta_file_path, "r")
     ighv_database = {}
     current_key = ""
@@ -406,26 +419,36 @@ def process_fasta_from_ebi(fasta_file_path, outliers):
             current_sequence = ""
         else:
             current_sequence = current_sequence + line
-    del ighv_database[""]
+    del ighv_database[""] # Needs to delete first item in order to place
+
     corresponding_ighv = []
-    for outlier in outliers:
-        min_score = 100000000000
-        min_score_key = ""
-        print("new")
-        for key in ighv_database.keys():
-            alignment_score = pairwise2.align.globalms(outlier, ighv_database[key], 1, -1, 0, 0, score_only=True)
-            if (len(outlier) - alignment_score) < min_score:
-                min_score = (len(outlier) - alignment_score)
-                print(min_score)
-                min_score_key = key
-                print(min_score_key)
-        corresponding_ighv.append(min_score_key)
-    return corresponding_ighv
+    corresponding_score = []
+    data_sequences = data['sequence']
+    data_outlier = data['outliers']
+
+    for individual_sequence_position in range(len(data_sequences)):
+        if data_outlier[individual_sequence_position] == 1 or data_outlier[individual_sequence_position] == 2:
+            max_score = 0
+            max_score_key = ""
+            for key in ighv_database.keys():
+                alignment_score = pairwise2.align.localms(data_sequences[individual_sequence_position], ighv_database[key], 1, -1, -1, 0, score_only=True)
+                if float(alignment_score) / float(len(ighv_database[key])) > max_score:
+                    max_score = float(alignment_score) / float(len(ighv_database[key]))
+                    max_score_key = key
+            corresponding_ighv.append(max_score_key)
+            corresponding_score.append(max_score)
+        else:
+            corresponding_ighv.append('Not Outlier')
+            corresponding_score.append(0)
+    data['v-genes'] = corresponding_ighv
+    data['v-genes score'] = corresponding_score
+    return data
 
 
 def KevinsFunction(table_of_sequences):
     table_of_sequences['inserts']=table_of_sequences['inserts'].apply(lambda x: str(x))
-    data, found_outlier = outlier_detection(table_of_sequences)
-    partitioned_data = partition(data, found_outlier)
+    data, found_outlier, outlier_type = outlier_detection(table_of_sequences)
+    v_gene_data = process_fasta_from_ebi('Vs.fasta', data)
+    partitioned_data = partition(v_gene_data, found_outlier, outlier_type)
     
     return(partitioned_data)
