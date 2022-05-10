@@ -58,7 +58,6 @@ def clone_kmer_show(K,fr_clone):
    
     pd_res.rename(columns={0:'Seq_kmer'},inplace=True)
 
-      
     return pd_res['Seq_kmer'].tolist()
 
 def subextra(clone):
