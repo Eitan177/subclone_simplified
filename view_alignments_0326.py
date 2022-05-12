@@ -103,7 +103,7 @@ def make_alignmentplotwithcluster(aln_pd, useconsensus,fr=1,fontsize="9pt", plot
     
     for ii in set(alnscores):
         
-        gg_subc[alnscores==ii] =gg[np.logical_and(alnscores==ii ,subclonecall==1)]
+        gg_subc[alnscores==ii] =gg[np.logical_and(alnscores==ii ,subclonecall>0)]
     
 
     
