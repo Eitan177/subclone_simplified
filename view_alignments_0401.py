@@ -233,9 +233,9 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
     with st.expander('alignment view'):
 
       # 03/31 Kevins clustering and feature addition
-      # table_of_sequences_with_clusters_and_features = KevinsFunction(table_of_sequences)
+      table_of_sequences_with_clusters_and_features = KevinsFunction(table_of_sequences)
       # table_of_sequences_with_clusters_and_features.to_csv("R540_FR1.csv")
-      table_of_sequences_with_clusters_and_features = pd.read_csv("R540_FR1.csv")
+      # table_of_sequences_with_clusters_and_features = pd.read_csv("R540_FR1.csv")
 
       table_of_outliers=table_of_sequences_with_clusters_and_features.groupby(['closest match']).apply(lambda x: np.array((x['sequence'][x['outliers'] > 0].iloc[0],sum(x['numberobserved']),x['index_mismatch'][x['outliers'] > 0].iloc[0],\
         x['homology_against_mother_clone'][x['outliers'] > 0].iloc[0])))

@@ -1,10 +1,11 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import sklearn
+from Bio.Seq import Seq
 from sklearn.svm import OneClassSVM
 from scipy.signal import savgol_filter, find_peaks
 from sklearn.cluster import DBSCAN
-from Bio import pairwise2
+from Bio import pairwise2, motifs
 import numpy as np
 
 
@@ -398,6 +399,71 @@ def partition(data, outliers, outlier_type):
     return data
 
 
+def partitionV2(data, outliers, outlier_type, variantoutliers):
+    """
+        Takes the data and for each sequence assigns a set of alignment score (one against each outlier) and then picks the one
+        that has the least difference between the sequence length and the target sequence.
+        :param data: Clone Seer Data
+        :param outliers: All of the outliers
+        :param outlier_type: The outlier type. 1 = Outlier from trinucleotide or num observed. 2 = somatic hypermutation
+        :param variantoutliers: All the outliers found by trinucleotide but trimmed to variants
+        :return: Data with a column for closest match
+    """
+    sequences_pass1 = data['variantseq'].tolist()
+    sequences = data['sequenceNotformatted'].tolist()
+    # First Pass utilizing only outliers coming from num observed filter
+    initial_outlier_class = [i for i, x in enumerate(outlier_type) if x == 1]  # Gets all of the indexes of outliers that came from the original num observed filter
+    initial_outlier_class_corresponding_sequence = []  # Corresponding sequence to num observed filter outliers
+    for individual_outlier_class in initial_outlier_class:
+        initial_outlier_class_corresponding_sequence.append(outliers[individual_outlier_class])
+    initial_outlier_index = []  # Corresponding Outlier Index Value in the actual outliers
+    for individual_outlier in initial_outlier_class_corresponding_sequence:
+        initial_outlier_index.append(data.index[data['sequenceNotformatted'] == individual_outlier])
+
+    # First pass matching
+    closest_match = []
+    count = 0
+    for sequence in sequences_pass1:
+        outlier_score = len(sequence)
+        best_outlier_position = -1
+        outlier_seq_pos = 2 * len(sequences_pass1)
+        sequence_no_dash = sequence.replace("-", "")
+        for outlier_count in range(len(variantoutliers)):
+            alignments = pairwise2.align.globalms(sequence_no_dash,
+                                                  variantoutliers[outlier_count].replace(
+                                                      "-", ""), 1, -1, -1, 0, score_only=True)
+            if len(sequence_no_dash) - alignments < outlier_score:
+                outlier_score = len(sequence_no_dash) - alignments
+                best_outlier_position = initial_outlier_class[outlier_count]
+                outlier_seq_pos = initial_outlier_index[outlier_count]
+            if len(sequence_no_dash) - alignments == outlier_score:
+                if outlier_seq_pos - count > initial_outlier_class[outlier_count] - count:
+                    best_outlier_position = initial_outlier_class[outlier_count]
+                    outlier_seq_pos = initial_outlier_class[outlier_count]
+        closest_match.append(best_outlier_position)
+        count += 1
+
+    # Grabbing original index for second pass. Takes 20 above and 20 below for each outlier and sees if class needs to be adjusted with better score
+    outlier_index = []  # Corresponding Outlier Index Value in the actual outliers
+    for individual_outlier in outliers:
+        outlier_index.append(data.loc[data['sequenceNotformatted'] == individual_outlier].index.values)
+    outlier_class = 0
+    for individual_outlier_index in outlier_index:
+        for search_area in range(max(0, individual_outlier_index[0] - 20),
+                                 min(individual_outlier_index[0] + 21, len(sequences))):
+            new_score = pairwise2.align.globalms(sequences[search_area].replace("-", ""),
+                                                 sequences[individual_outlier_index[0]].replace("-", ""), 1, -1, -1, 0,
+                                                 score_only=True)
+            old_score = pairwise2.align.globalms(sequences[search_area].replace("-", ""),
+                                                 outliers[closest_match[search_area]].replace("-", ""), 1, -1, -1, 0,
+                                                 score_only=True)
+            if new_score > old_score:
+                closest_match[search_area] = outlier_class
+        outlier_class += 1
+    data['closest match'] = closest_match
+    return data
+
+
 def process_fasta_from_ebi(fasta_file_path, data):
     """
     The function takes the fasta_file generated from EBI listing the V genes and matches it up against the outliers
@@ -448,7 +514,15 @@ def process_fasta_from_ebi(fasta_file_path, data):
 def KevinsFunction(table_of_sequences):
     table_of_sequences['inserts']=table_of_sequences['inserts'].apply(lambda x: str(x))
     data, found_outlier, outlier_type = outlier_detection(table_of_sequences)
+    outlierseq = data[data[['outliers', 'somatic_mutations']].apply(lambda x: x[0] == 1 and x[1] == 0, axis=1)].sequence.apply(lambda x: Seq(x))
+    outlierseqlist = outlierseq.tolist()
+    print(outlierseqlist)
+    outlierseqmotif = motifs.create(outlierseqlist)
+    mutated_positions = np.where([not (a == 18 or c == 18 or t == 18 or g == 18) for a, c, g, t in zip(outlierseqmotif.counts['A'], outlierseqmotif.counts['C'], outlierseqmotif.counts['G'], outlierseqmotif.counts['T'])])[0]
+    seq_onlymutated = data.sequence.apply(lambda x: ''.join([x[i] for i in mutated_positions]))
+    data['variantseq'] = seq_onlymutated
+    outlierseqmutated = outlierseq.apply(lambda x: ''.join([str(x)[i] for i in mutated_positions])).tolist()
     v_gene_data = process_fasta_from_ebi('Vs.fasta', data)
-    partitioned_data = partition(v_gene_data, found_outlier, outlier_type)
+    partitioned_data = partitionV2(v_gene_data, found_outlier, outlier_type, outlierseqmutated)
     
     return(partitioned_data)
