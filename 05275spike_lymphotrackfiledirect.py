@@ -71,17 +71,59 @@ with st.form(key='prep'):
     seq_file = None
     files_to_merge = None
     if detectormerge == 'Detect and quantify subclones in one framework':
-        seq_file = st.file_uploader("Upload Framework File",type = [".tsv",".txt"])
-        fr_clone = st.text_input("Framework Clone sequence ",\
-            "ACACGGCTGTGTATTACTGTGCGAGAGATCTGAGGAACGAAATGGCGGGGGATGGTGCGGGGAGTTAGTCGACTACTACTACTACTACATGTACGTCTGGGGCAAAGGGACCAC")
-        fr = st.radio('Framework',(1,2,3),2)
-        fr_clone=subextra(fr_clone)
-        to_rev_complement=st.radio('reverse complement input',['No','Yes'])
-        if to_rev_complement == 'Yes':
-            fr_clone=str(Seq(fr_clone).reverse_complement())    
-        K = st.slider('Kmer length',10,len(fr_clone),27)
+        #seq_file = st.file_uploader("Upload Framework File",type = [".tsv",".txt"])
+
+        seq_file3a = st.file_uploader("Upload Framework 3 File",type = [".tsv",".txt"])
+        seq_file3b = st.file_uploader("Upload 2nd Framework 3",type = [".tsv",".txt"])
+        seq_file3c = st.file_uploader("Upload 3rd Framework 3",type = [".tsv",".txt"])        
+        seq_file2a = st.file_uploader("Upload Framework 2 File",type = [".tsv",".txt"])
+        seq_file2b = st.file_uploader("Upload 2nd Framework 2" ,type = [".tsv",".txt"])
+        seq_file2c = st.file_uploader("Upload 3rd Framework 2",type = [".tsv",".txt"])         
+        seq_file1a = st.file_uploader("Upload Framework  1 File",type = [".tsv",".txt"])
+        seq_file1b = st.file_uploader("Upload 2nd Framework 1 File",type = [".tsv",".txt"])
+        seq_file1c = st.file_uploader("Upload 3rd Framework 1",type = [".tsv",".txt"])         
+
+
+
+        fr3_clone2 = st.text_input("Framework3 Clone sequence ",\
+            "TCTGAGGACACGGCCGTGTATTACTGTGCGAGAGATAGGCGCGGGGAATGGCCTCCCTCGGATTACTACTACTACTACTACATGGACGTCTGGGGCAAAGGGACCAC")
+        fr3_clone = st.text_input("Framework3 Clone sequence 2",\
+            "ACACGGCTGTGTATTACTGTGCGAGCCAGATATTGTAGTGGTGGTAGCTCCCTATCGGGGAGCTTTTGATATCTGGGGCCAAGGGACAAT")      
+        fr2_clone2 = st.text_input("Framework2 Clone sequence ",\
+            "TGGACAAGGGCTTGAGTGGATGGGAGGGATCATCCCTATCTTTGGTACAGCAAACTACGCACAGAAGTTCCAGGGCAGAGTCACGATTACCGCGGACGAATCCACGAGCACAGCCTACATGGAGCTGAGCAGCCTGAGATCTGAGGACACGGCCGTGTATTACTGTGCGAGAGATAGGCGCGGGGAATGGCCTCCCTCGGATTACTACTACTACTACTACATGGACGTCTGGGGCAAAGGGACCAC")
+        fr2_clone = st.text_input("Framework2 Clone sequence 2",\
+            "AGGGAAGGGGCTGGAGTGGGTCTCATCCATTAGTAGTAGTAGTAGTTACATATACTACGCAGACTCAGTGAAGGGCCGATTCACCATCTCCAGAGACAACGCCAAGAACTCACTGTATCTGCAAATGAACAGCCTGAGAGCCGAGGACACGGCTGTGTATTACTGTGCGAGCCAGATATTGTAGTGGTGGTAGCTCCCTATCGGGGAGCTTTTGATATCTGGGGCCAAGGGACAAT")    
+        fr1_clone2 = st.text_input("Framework1 Clone sequence ",\
+            "CTTCTGGAGGCACCTTCAGCAGCTATGCTATCAGCTGGGTGCGACAGGCCCCTGGACAAGGGCTTGAGTGGATGGGAGGGATCATCCCTATCTTTGGTACAGCAAACTACGCACAGAAGTTCCAGGGCAGAGTCACGATTACCGCGGACGAATCCACGAGCACAGCCTACATGGAGCTGAGCAGCCTGAGATCTGAGGACACGGCCGTGTATTACTGTGCGAGAGATAGGCGCGGGGAATGGCCTCCCTCGGATTACTACTACTACTACTACATGGACGTCTGGGGCAAAGGGACCAC")
+        fr1_clone = st.text_input("Framework1 Clone sequence 2",\
+            "GCCTCTGGATTCACCTTCAGTAGCTATAGCATGAACTGGGTCCGCCAGGCTCCAGGGAAGGGGCTGGAGTGGGTCTCATCCATTAGTAGTAGTAGTAGTTACATATACTACGCAGACTCAGTGAAGGGCCGATTCACCATCTCCAGAGACAACGCCAAGAACTCACTGTATCTGCAAATGAACAGCCTGAGAGCCGAGGACACGGCTGTGTATTACTGTGCGAGCCAGATATTGTAGTGGTGGTAGCTCCCTATCGGGGAGCTTTTGATATCTGGGGCCAAGGGACAAT")
+
+
+        fr3_clone=subextra(fr3_clone)
+        fr2_clone=subextra(fr2_clone)
+        fr1_clone=subextra(fr1_clone)
+        
+        fr3_clone2=subextra(fr3_clone2)
+        fr2_clone2=subextra(fr2_clone2)
+        fr1_clone2=subextra(fr1_clone2)
+
+        #fr_clone = st.text_input("Framework Clone sequence ",\
+        #    "ACACGGCTGTGTATTACTGTGCGAGAGATCTGAGGAACGAAATGGCGGGGGATGGTGCGGGGAGTTAGTCGACTACTACTACTACTACATGTACGTCTGGGGCAAAGGGACCAC")
+        #fr = st.radio('Framework',(1,2,3),2)
+        #fr_clone=subextra(fr_clone)
+        #to_rev_complement=st.radio('reverse complement input',['No','Yes'])
+        #if to_rev_complement == 'Yes':
+        #    fr_clone=str(Seq(fr_clone).reverse_complement())    
+        K3 = st.slider('FR3 Kmer length',10,len(fr1_clone2),27)
+        K2 = st.slider('FR3 Kmer length',10,len(fr1_clone2),57)
+        K1 = st.slider('FR3 Kmer length',10,len(fr1_clone2),77)
         independentK = st.slider('Number of Independent Kmers',1,10,1)        
-        res_list =clone_kmer_show(K,fr_clone)
+        res_list3a =clone_kmer_show(K3,fr3_clone)
+        res_list3b =clone_kmer_show(K3,fr3_clone2)
+        res_list2a =clone_kmer_show(K2,fr2_clone)
+        res_list2b =clone_kmer_show(K2,fr2_clone2)
+        res_list1a =clone_kmer_show(K1,fr1_clone)
+        res_list1b =clone_kmer_show(K1,fr1_clone2)
     else:
         files_to_merge=st.file_uploader('Files to merge',type=[".csv"],accept_multiple_files=True)
 
@@ -128,7 +170,6 @@ def get_lymphotrackdirectfile(lrfile):
     return lrdf
  
 def process_seqs(seq_file):
-
     return get_lymphotrackdirectfile(seq_file)
 
 
@@ -156,14 +197,19 @@ class merge_files:
 
 
 class subclone:
-    def __init__(self,seq_file,fr,resuse,independentK,fr_clone):        
+    def __init__(self,seq_file,fr,resuse,independentK,fr_clone,must_be_identical_percent):      
+        self.clust= process_seqs(seq_file)
+        self.must_be_identical_percent = must_be_identical_percent
+        self.first(fr,resuse,independentK,fr_clone)
+
+    def first(self,fr,resuse,independentK,fr_clone):      
         self.res = resuse
         self.fr_clone = fr_clone
         self.fr = fr
         self.see_abundant=False
         self.fr_subcloneseqs=list()
         self.independentK= independentK
-        self.clust= process_seqs(seq_file)
+
         st.write('framework kmer match in progress')
         self.fr_total, self.clust_clone = self.process_match(self.clust)
         st.write('formatting framework sequences for '+ str(self.clust_clone.shape[0]))
@@ -171,7 +217,7 @@ class subclone:
             self.abundant_seqfr=self.fr_clone
         else:        
             self.abundant_seqfr=self.clust_clone.seq.iloc[0]   
-                         
+                        
         self.create_visual()
         cola,colb,colc = st.columns(3)
         cola.write('match to clone total '+str(self.fr_total)) 
@@ -225,7 +271,7 @@ class subclone:
         aln=[aln[jjj] for jjj in np.argsort(partclus['score'])]
         partclus=partclus.sort_values(['score'])
        
-        score_touse=[pairwise2.align.localms(gg.id,clone,1,-1,-5,0,score_only=True) for gg in aln]
+        score_touse=[pairwise2.align.localms(gg.id,clone,1,-1,-5,-1,score_only=True) for gg in aln]
         
         scoremax=np.max(score_touse)
         argscores_touse=np.where(score_touse==scoremax)[0]
@@ -245,14 +291,15 @@ class subclone:
 
         
         ## added 0108
-        makesurewedonotneedtotrimseq=align_toclone_togettruncation=pairwise2.align.localms(aln[argscore_touse].seq,clone,1,-1,-5,0)
+        #makesurewedonotneedtotrimseq=align_toclone_togettruncation=pairwise2.align.localms(aln[argscore_touse].seq,clone,1,-1,-5,-1)
         #if makesurewedonotneedtotrimseq[0].start > 0:
             #st.write('SEQ MAY NEED TRIM')
             #pdb.set_trace()
-        ###     
-        aln_sortbyscore=[hh[0] for hh in zip(aln,score_touse) if not hh[1]<=(len(clone)*0.55)]
+        #### 
+  
+        aln_sortbyscore=[hh[0] for hh in zip(aln,score_touse) if not hh[1]<=(len(clone)*self.must_be_identical_percent )]
         
-        st.write('keep ',str(len(aln_sortbyscore))+ 'kmer matches, filter '+str(np.sum([s <=(len(clone)*0.55) for s in score_touse]))+' after pairwise alignment')
+        st.write('keep ',str(len(aln_sortbyscore))+ 'kmer matches, filter '+str(np.sum([s <=(len(clone)* self.must_be_identical_percent ) for s in score_touse]))+' after pairwise alignment')
         
 
         if len(aln_sortbyscore)>1:
@@ -264,17 +311,51 @@ class subclone:
     def create_visual(self):
         with st.spinner('formatting framework sequences for '+ str(self.clust_clone.shape[0])+' sequences and calculating alignment scores'):    
             part1, aln1, _cl,_cr = self.get_partclus_and_aln(self.clust_clone,self.fr_clone,self.abundant_seqfr)            
-        if len(aln1)>0:
+        
+        if len(aln1)>1:
             tallysum, subcloneseqsfr=view_alignment(aln1, self.abundant_seqfr,self.fr) 
-        self.fr_total = tallysum
-        self.fr_subcloneseqs=subcloneseqsfr
+            self.fr_total = tallysum
+            self.fr_subcloneseqs=subcloneseqsfr
 
 
 
 
-if detectormerge == 'Detect and quantify subclones in one framework' and seq_file is not None and fr_clone != '':
-    st.write('input sequence is: '+fr_clone)                        
-    subclone_obj=subclone(seq_file,fr,res_list,independentK, fr_clone)       
+if detectormerge == 'Detect and quantify subclones in one framework' and seq_file3a is not None and fr3_clone2 != '':
+    
+    for seq_filea, seqfileb,seqfilec,reslista,reslistb,fr_clone1,fr_clone2,must_be_identical_percent in zip([seq_file3a, seq_file2a, seq_file1a],[seq_file3b,seq_file2b,seq_file1b],[seq_file3c,seq_file2c,seq_file1c],[res_list3a,res_list2a,res_list1a],[res_list3b,res_list2b,res_list1b], [fr3_clone,fr2_clone,fr1_clone],[fr3_clone2,fr2_clone2,fr1_clone2],[0.75,0.85,0.89]):
+
+        subclone_obj3a1=subclone(seq_filea,3,reslista,independentK, fr_clone1,must_be_identical_percent)
+        subclone_obj3a1.first(3,reslistb,independentK, fr_clone2)
+        subclone_obj3b1=subclone(seqfileb,3,reslista,independentK, fr_clone1,must_be_identical_percent)
+        subclone_obj3b1.first(3,reslistb,independentK, fr_clone2)
+        subclone_obj3c1=subclone(seqfilec,3,reslista,independentK, fr_clone1,must_be_identical_percent)
+        subclone_obj3c1.first(3,reslistb,independentK, fr_clone2)      
+    #subclone_obj3b1=subclone(seq_fileb ,3,res_list3a,independentK, fr3_clone)
+    #subclone_obj3b1.first(3,res_list3b,independentK, fr3_clone2)
+
+    #subclone_obj3c1=subclone(seq_file3c ,3,res_list3a,independentK, fr3_clone)
+    #subclone_obj3c1.first(3,res_list3b,independentK, fr3_clone2)
+
+    #subclone_obj2a1=subclone(seq_file2a,2,res_list2a,independentK, fr2_clone)
+    #subclone_obj2a2=subclone(seq_file2a,2,res_list2b,independentK, fr2_clone2)   
+
+    #subclone_obj2b1=subclone(seq_file2b,2,res_list2a,independentK, fr2_clone)
+    #subclone_obj2b2=subclone(seq_file2b,2,res_list2b,independentK, fr2_clone2) 
+
+    #subclone_obj2c1=subclone(seq_file2c,2,res_list2a,independentK, fr2_clone)
+    #subclone_obj2c2=subclone(seq_file2c,2,res_list2b,independentK, fr2_clone2) 
+
+    #subclone_obj1a1=subclone(seq_file1a,1,res_list3a,independentK, fr1_clone)
+    #subclone_obj1a2=subclone(seq_file1a,1,res_list3b,independentK, fr1_clone2)  
+
+    #subclone_obj1b1=subclone(seq_file1b,1,res_list3a,independentK, fr1_clone)
+    #subclone_obj1b2=subclone(seq_file1b,1,res_list3b,independentK, fr1_clone2)  
+
+    #subclone_obj1c1=subclone(seq_file1c,1,res_list3a,independentK, fr1_clone)
+    #subclone_obj1c2=subclone(seq_file1c,1,res_list3b,independentK, fr1_clone2)  
+
+
+
 elif files_to_merge is not None:
     resultsmerged_obj=merge_files(files_to_merge)
 

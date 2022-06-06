@@ -71,7 +71,7 @@ def make_alignmentplotwithcluster(aln_pd, useconsensus,fr=1,fontsize="9pt", plot
     gg=np.array(colors).reshape((-1, len(seqs[0])))
     
     
-    pdb.set_trace()
+    #pdb.set_trace()
     subclonecolormatch = np.repeat([subclonecolors[int(ii)] for ii in alnscores],5).reshape(-1,5)
     
 
@@ -140,7 +140,6 @@ def make_alignmentplotwithcluster(aln_pd, useconsensus,fr=1,fontsize="9pt", plot
     if uniq.shape[0]>1:
       uniqdf=pd.DataFrame(uniq)
 
-
       uniqdf=np.array(uniqdf)
       countsforlink=counts.copy()
       countsforlink[np.argmax(countsforlink)]=np.ceil((sum(counts)-max(counts))/500)
@@ -201,7 +200,12 @@ def make_alignmentplotwithcluster(aln_pd, useconsensus,fr=1,fontsize="9pt", plot
       justsubc_tocolors[np.where(countview_fordf==np.max(countview_fordf)),0:(justsubc_tocolors.shape[1]-5) ]=['purple']
 
 
-    seqs_for_view = np.repeat(seqs,countsforlink) 
+      seqs_for_view = np.repeat(seqs,countsforlink) 
+    
+    else:
+      seqs_for_view= seqs
+      uniqtocolors = ugg
+      justsubc_tocolors = gg_subc
     ## 03/26
     incrementforview = int(np.round(seqs_for_view.shape[0]/1000))
     ##incrementforview = 1
