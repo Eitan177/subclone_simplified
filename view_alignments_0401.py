@@ -69,6 +69,7 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
     
     ids = np.arange(0,len(seqs))
     ids=np.char.mod('%d', ids)
+   
     ids=ids.tolist()
 
     colors=get_colors_consensus(seqs,consensus_sequence)
@@ -165,8 +166,11 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
 
 
     
-    table_of_sequences=pd.DataFrame({'sequence': seqs,'sequenceNotformatted': forfileseqs,'numberobserved':counts,'inserts':forfileinsert.tolist()})
-    st.download_button(label='proper order Download',data=convert_df(table_of_sequences),file_name='unique_data.csv',mime='text/csv') 
+    if len(forfileinsert) == 1:
+      table_of_sequences=pd.DataFrame({'sequence': seqs,'sequenceNotformatted': forfileseqs,'numberobserved':counts,'inserts':forfileinsert})
+    else:
+      table_of_sequences=pd.DataFrame({'sequence': seqs,'sequenceNotformatted': forfileseqs,'numberobserved':counts,'inserts':forfileinsert.tolist()})
+    st.download_button(label='proper order Download',data=convert_df(table_of_sequences),file_name='unique_data.csv',mime='text/csv',key=random()) 
 
     seqs_for_view = np.repeat(seqs,countsforlink) 
     for_file_seqs_view = np.repeat(forfileseqs,countsforlink)
@@ -234,15 +238,20 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
 
       # 03/31 Kevins clustering and feature addition
       table_of_sequences_with_clusters_and_features = KevinsFunction(table_of_sequences)
+      
+      
+      table_of_sequences_with_clusters_and_features_without_unassigned =table_of_sequences_with_clusters_and_features[table_of_sequences_with_clusters_and_features['closest match']!= -1]
+      if len(table_of_sequences_with_clusters_and_features_without_unassigned)>0:
+        table_of_sequences_with_clusters_and_features=table_of_sequences_with_clusters_and_features_without_unassigned
+      
       # table_of_sequences_with_clusters_and_features.to_csv("R540_FR1.csv")
       # table_of_sequences_with_clusters_and_features = pd.read_csv("R540_FR1.csv")
-
-      table_of_outliers=table_of_sequences_with_clusters_and_features.groupby(['closest match']).apply(lambda x: np.array((x['sequence'][x['outliers'] > 0].iloc[0],sum(x['numberobserved']),x['index_mismatch'][x['outliers'] > 0].iloc[0],\
-        x['homology_against_mother_clone'][x['outliers'] > 0].iloc[0])))
-      table_w_sequence_and_count= pd.DataFrame({'seq':np.vstack(table_of_outliers).T[0],'sum of counts':np.vstack(table_of_outliers).T[1],\
-        'discrepant_positions': np.vstack(table_of_outliers).T[2],'mother_clone_distance':np.vstack(table_of_outliers).T[3]})
       
-        
+      table_of_outliers=table_of_sequences_with_clusters_and_features.groupby(['closest match']).apply(lambda x: np.array((x['sequence'][x['outliers'] > 0].iloc[0],sum(x['numberobserved']),x['index_mismatch'][x['outliers'] > 0].iloc[0],x['homology_against_mother_clone'][x['outliers'] > 0].iloc[0],x['inserts'][x['outliers'] > 0].iloc[0],x['sequenceNotformatted'][x['outliers'] > 0].iloc[0],len(x['sequence'][x['outliers'] > 0].iloc[0]),len(x['sequenceNotformatted'][x['outliers'] > 0].iloc[0]),x['v-genes'][x['outliers'] > 0].iloc[0])))
+      
+      table_w_sequence_and_count= pd.DataFrame({'seq':np.vstack(table_of_outliers).T[0],'sum of counts': [np.int(ii) for ii in np.vstack(table_of_outliers).T[1]],\
+        'discrepant_positions': [str([np.int(jj) for jj in ii]) for ii in np.vstack(table_of_outliers).T[2]],'mother_clone_distance':np.vstack(table_of_outliers).T[3],'insertpositions': np.vstack(table_of_outliers).T[4], 'notformatted':np.vstack(table_of_outliers).T[5],'length':np.vstack(table_of_outliers).T[6],'unformattedlength':np.vstack(table_of_outliers).T[7],'V-gene':np.vstack(table_of_outliers).T[8]}) 
+      
       make_alignmentplotwithcluster(table_of_sequences_with_clusters_and_features,consensus_sequence,reorder=False)
 
       make_alignmentplotwithcluster(table_of_sequences_with_clusters_and_features,consensus_sequence,reorder=True)
