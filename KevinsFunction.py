@@ -247,7 +247,7 @@ def new_metrics(data):
 def add_in_outlier_from_suspicious_mismatch(data, outliers_list):
     suspicious_mismatch_results = data['suspicious_mismatch'].tolist()
     
-    smoothed_results = savgol_filter(suspicious_mismatch_results, window_length=np.min((len(suspicious_mismatch_results),15)), polyorder=1)
+    smoothed_results = savgol_filter(suspicious_mismatch_results, window_length=np.min((len(suspicious_mismatch_results), 5)), polyorder=1)
     peaks, properties = find_peaks(smoothed_results, prominence=1)
     # Generates out plot for analysis
     print(smoothed_results)
@@ -260,10 +260,10 @@ def add_in_outlier_from_suspicious_mismatch(data, outliers_list):
     new_outliers_list = outliers_list.copy()
 
     for individual_peak in peaks:
-        search_area = suspicious_mismatch_results[individual_peak - 7: individual_peak + 7]
+        search_area = suspicious_mismatch_results[individual_peak - 2: individual_peak + 2]
         max_value = max(search_area)
         max_index = search_area.index(max_value)
-        new_outliers_list[(individual_peak + max_index - 7)] = 2
+        new_outliers_list[(individual_peak + max_index - 2)] = 2
     return new_outliers_list
 
 
