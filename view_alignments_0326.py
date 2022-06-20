@@ -71,7 +71,7 @@ def make_alignmentplotwithcluster(aln_pd, useconsensus,fr=1,fontsize="9pt", plot
     gg=np.array(colors).reshape((-1, len(seqs[0])))
     
     
-    pdb.set_trace()
+    # pdb.set_trace()
     subclonecolormatch = np.repeat([subclonecolors[int(ii)] for ii in alnscores],5).reshape(-1,5)
     
 
