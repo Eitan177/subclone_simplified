@@ -298,7 +298,7 @@ def outlier_detection(file):
     """
 
     outlier_from_number_observed = data_with_new_metrics['numberobserved'].tolist()
-    smoothed_results = savgol_filter(outlier_from_number_observed, window_length=31, polyorder=1)
+    smoothed_results = savgol_filter(outlier_from_number_observed, window_length=15, polyorder=1)
     peaks, properties = find_peaks(smoothed_results, prominence=1)
     # Generates out plot for analysis
     # print(smoothed_results)
@@ -310,10 +310,10 @@ def outlier_detection(file):
     outliers_list = np.zeros(len(data.index))
     outliers_list[row_of_mother_clone] = 1
     for individual_peak in peaks:
-        search_area = outlier_from_number_observed[individual_peak - 15: individual_peak + 15]
+        search_area = outlier_from_number_observed[individual_peak - 7: individual_peak + 7]
         max_value = max(search_area)
         max_index = search_area.index(max_value)
-        outliers_list[(individual_peak + max_index - 15)] = 1
+        outliers_list[(individual_peak + max_index - 7)] = 1
 
     df_insert_mean = data_with_insertion['numberobserved'].mean()
     df_insert_std = data_with_insertion['numberobserved'].std()
