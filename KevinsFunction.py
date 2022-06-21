@@ -514,14 +514,16 @@ def process_fasta_from_ebi(fasta_file_path, data):
 def KevinsFunction(table_of_sequences):
     table_of_sequences['inserts']=table_of_sequences['inserts'].apply(lambda x: str(x))
     data, found_outlier, outlier_type = outlier_detection(table_of_sequences)
-    outlierseq = data[data[['outliers', 'somatic_mutations']].apply(lambda x: x[0] == 1 and x[1] == 0, axis=1)].sequence.apply(lambda x: Seq(x))
+    """
+   outlierseq = data[data[['outliers', 'somatic_mutations']].apply(lambda x: x[0] == 1 and x[1] == 0, axis=1)].sequence.apply(lambda x: Seq(x))
     outlierseqlist = outlierseq.tolist()
     outlierseqmotif = motifs.create(outlierseqlist)
     mutated_positions = np.where([not (a == 18 or c == 18 or t == 18 or g == 18) for a, c, g, t in zip(outlierseqmotif.counts['A'], outlierseqmotif.counts['C'], outlierseqmotif.counts['G'], outlierseqmotif.counts['T'])])[0]
     seq_onlymutated = data.sequence.apply(lambda x: ''.join([x[i] for i in mutated_positions]))
     data['variantseq'] = seq_onlymutated
     outlierseqmutated = outlierseq.apply(lambda x: ''.join([str(x)[i] for i in mutated_positions])).tolist()
+    """
     v_gene_data = process_fasta_from_ebi('Vs.fasta', data)
-    partitioned_data = partitionV2(v_gene_data, found_outlier, outlier_type, outlierseqmutated)
-    #partitioned_data = partition(v_gene_data, found_outlier, outlier_type)
+    #partitioned_data = partitionV2(v_gene_data, found_outlier, outlier_type, outlierseqmutated)
+    partitioned_data = partition(v_gene_data, found_outlier, outlier_type)
     return(partitioned_data)
