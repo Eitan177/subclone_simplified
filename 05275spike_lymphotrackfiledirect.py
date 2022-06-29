@@ -1,4 +1,5 @@
 from bdb import set_trace
+from email.policy import default
 #from tkinter.messagebox import NO
 import streamlit as st
 #import neatBio.sequtils as utils
@@ -67,63 +68,99 @@ def subextra(clone):
 detectormerge=st.radio('What are we doing here?',('Detect and quantify subclones in one framework','merge the results of more than one framework'))
 
 
+with st.form(key='gui'):
+    seq_file = None
+    files_to_merge = None
+    if detectormerge == 'Detect and quantify subclones in one framework':
+        #seq_file = st.file_uploader("Upload Framework File",type = [".tsv",".txt"])
+        frameworks = st.multiselect('What frameworks should we analyze?',options=['FR3','FR2','FR1'],default=['FR3','FR2','FR1'])
+        replicate_count = st.selectbox('Replicates?', options=[1,2,3],index=2)
+        clones = st.selectbox('Clones?',options=[1,2])   
+    submit_button1 = st.form_submit_button(label='Submit gui setup')
+
+
 with st.form(key='prep'):
     seq_file = None
     files_to_merge = None
     if detectormerge == 'Detect and quantify subclones in one framework':
         #seq_file = st.file_uploader("Upload Framework File",type = [".tsv",".txt"])
+        if 'FR3' in frameworks:
+            seq_file3a = st.file_uploader("Upload Framework 3 File",type = [".tsv",".txt"])
+        if 'FR3' in frameworks and replicate_count > 1:    
+            seq_file3b = st.file_uploader("Upload 2nd Framework 3",type = [".tsv",".txt"])
+        if 'FR3' in frameworks and replicate_count ==3:     
+            seq_file3c = st.file_uploader("Upload 3rd Framework 3",type = [".tsv",".txt"])   
 
-        seq_file3a = st.file_uploader("Upload Framework 3 File",type = [".tsv",".txt"])
-        seq_file3b = st.file_uploader("Upload 2nd Framework 3",type = [".tsv",".txt"])
-        seq_file3c = st.file_uploader("Upload 3rd Framework 3",type = [".tsv",".txt"])        
-        seq_file2a = st.file_uploader("Upload Framework 2 File",type = [".tsv",".txt"])
-        seq_file2b = st.file_uploader("Upload 2nd Framework 2" ,type = [".tsv",".txt"])
-        seq_file2c = st.file_uploader("Upload 3rd Framework 2",type = [".tsv",".txt"])         
-        seq_file1a = st.file_uploader("Upload Framework  1 File",type = [".tsv",".txt"])
-        seq_file1b = st.file_uploader("Upload 2nd Framework 1 File",type = [".tsv",".txt"])
-        seq_file1c = st.file_uploader("Upload 3rd Framework 1",type = [".tsv",".txt"])         
-
-
-
-        fr3_clone2 = st.text_input("Framework3 Clone sequence ",\
-            "TCTGAGGACACGGCCGTGTATTACTGTGCGAGAGATAGGCGCGGGGAATGGCCTCCCTCGGATTACTACTACTACTACTACATGGACGTCTGGGGCAAAGGGACCAC")
-        fr3_clone = st.text_input("Framework3 Clone sequence 2",\
-            "ACACGGCTGTGTATTACTGTGCGAGCCAGATATTGTAGTGGTGGTAGCTCCCTATCGGGGAGCTTTTGATATCTGGGGCCAAGGGACAAT")      
-        fr2_clone2 = st.text_input("Framework2 Clone sequence ",\
-            "TGGACAAGGGCTTGAGTGGATGGGAGGGATCATCCCTATCTTTGGTACAGCAAACTACGCACAGAAGTTCCAGGGCAGAGTCACGATTACCGCGGACGAATCCACGAGCACAGCCTACATGGAGCTGAGCAGCCTGAGATCTGAGGACACGGCCGTGTATTACTGTGCGAGAGATAGGCGCGGGGAATGGCCTCCCTCGGATTACTACTACTACTACTACATGGACGTCTGGGGCAAAGGGACCAC")
-        fr2_clone = st.text_input("Framework2 Clone sequence 2",\
-            "AGGGAAGGGGCTGGAGTGGGTCTCATCCATTAGTAGTAGTAGTAGTTACATATACTACGCAGACTCAGTGAAGGGCCGATTCACCATCTCCAGAGACAACGCCAAGAACTCACTGTATCTGCAAATGAACAGCCTGAGAGCCGAGGACACGGCTGTGTATTACTGTGCGAGCCAGATATTGTAGTGGTGGTAGCTCCCTATCGGGGAGCTTTTGATATCTGGGGCCAAGGGACAAT")    
-        fr1_clone2 = st.text_input("Framework1 Clone sequence ",\
-            "CTTCTGGAGGCACCTTCAGCAGCTATGCTATCAGCTGGGTGCGACAGGCCCCTGGACAAGGGCTTGAGTGGATGGGAGGGATCATCCCTATCTTTGGTACAGCAAACTACGCACAGAAGTTCCAGGGCAGAGTCACGATTACCGCGGACGAATCCACGAGCACAGCCTACATGGAGCTGAGCAGCCTGAGATCTGAGGACACGGCCGTGTATTACTGTGCGAGAGATAGGCGCGGGGAATGGCCTCCCTCGGATTACTACTACTACTACTACATGGACGTCTGGGGCAAAGGGACCAC")
-        fr1_clone = st.text_input("Framework1 Clone sequence 2",\
-            "GCCTCTGGATTCACCTTCAGTAGCTATAGCATGAACTGGGTCCGCCAGGCTCCAGGGAAGGGGCTGGAGTGGGTCTCATCCATTAGTAGTAGTAGTAGTTACATATACTACGCAGACTCAGTGAAGGGCCGATTCACCATCTCCAGAGACAACGCCAAGAACTCACTGTATCTGCAAATGAACAGCCTGAGAGCCGAGGACACGGCTGTGTATTACTGTGCGAGCCAGATATTGTAGTGGTGGTAGCTCCCTATCGGGGAGCTTTTGATATCTGGGGCCAAGGGACAAT")
+        if 'FR2' in frameworks:         
+            seq_file2a = st.file_uploader("Upload Framework 2 File",type = [".tsv",".txt"])
+        if 'FR2' in frameworks and replicate_count > 1:        
+            seq_file2b = st.file_uploader("Upload 2nd Framework 2" ,type = [".tsv",".txt"])
+        if 'FR2' in frameworks and replicate_count ==3:
+            seq_file2c = st.file_uploader("Upload 3rd Framework 2",type = [".tsv",".txt"])         
+        if 'FR1' in frameworks: 
+            seq_file1a = st.file_uploader("Upload Framework  1 File",type = [".tsv",".txt"])
+        if 'FR1' in frameworks and replicate_count > 1: 
+            seq_file1b = st.file_uploader("Upload 2nd Framework 1 File",type = [".tsv",".txt"])
+        if 'FR1' in frameworks and replicate_count ==3:
+            seq_file1c = st.file_uploader("Upload 3rd Framework 1",type = [".tsv",".txt"])         
 
 
-        fr3_clone=subextra(fr3_clone)
-        fr2_clone=subextra(fr2_clone)
-        fr1_clone=subextra(fr1_clone)
+
+        if 'FR3' in frameworks:
+            K3 = st.slider('FR3 Kmer length',10,400,27) 
+            fr3_clone = st.text_input("Framework3 Clone sequence 2",\
+                "ACACGGCTGTGTATTACTGTGCGAGCCAGATATTGTAGTGGTGGTAGCTCCCTATCGGGGAGCTTTTGATATCTGGGGCCAAGGGACAAT")    
+            fr3_clone=subextra(fr3_clone)  
+             
+            res_list3a =clone_kmer_show(K3,fr3_clone)
+        if 'FR3' in frameworks and clones == 2:
+            fr3_clone2 = st.text_input("Framework3 Clone sequence ",\
+                "TCTGAGGACACGGCCGTGTATTACTGTGCGAGAGATAGGCGCGGGGAATGGCCTCCCTCGGATTACTACTACTACTACTACATGGACGTCTGGGGCAAAGGGACCAC")
+            fr3_clone2=subextra(fr3_clone2)    
+            res_list3b =clone_kmer_show(K3,fr3_clone2)
+
+        if 'FR2' in frameworks:
+            K2 = st.slider('FR2 Kmer length',10,400,57)
+            fr2_clone = st.text_input("Framework2 Clone sequence 2",\
+                "AGGGAAGGGGCTGGAGTGGGTCTCATCCATTAGTAGTAGTAGTAGTTACATATACTACGCAGACTCAGTGAAGGGCCGATTCACCATCTCCAGAGACAACGCCAAGAACTCACTGTATCTGCAAATGAACAGCCTGAGAGCCGAGGACACGGCTGTGTATTACTGTGCGAGCCAGATATTGTAGTGGTGGTAGCTCCCTATCGGGGAGCTTTTGATATCTGGGGCCAAGGGACAAT")    
+            fr2_clone=subextra(fr2_clone)
+            
+            res_list2a =clone_kmer_show(K2,fr2_clone)
+
+
+        if 'FR2' in frameworks and clones == 2:
+            fr2_clone2 = st.text_input("Framework2 Clone sequence ",\
+                "TGGACAAGGGCTTGAGTGGATGGGAGGGATCATCCCTATCTTTGGTACAGCAAACTACGCACAGAAGTTCCAGGGCAGAGTCACGATTACCGCGGACGAATCCACGAGCACAGCCTACATGGAGCTGAGCAGCCTGAGATCTGAGGACACGGCCGTGTATTACTGTGCGAGAGATAGGCGCGGGGAATGGCCTCCCTCGGATTACTACTACTACTACTACATGGACGTCTGGGGCAAAGGGACCAC")
+            fr2_clone2=subextra(fr2_clone2)
+            res_list2b =clone_kmer_show(K2,fr2_clone2)    
+
+
+        if 'FR1' in frameworks:
+            K1 = st.slider('FR1 Kmer length',10,400,77)
+            fr1_clone = st.text_input("Framework1 Clone sequence 2",\
+                "GCCTCTGGATTCACCTTCAGTAGCTATAGCATGAACTGGGTCCGCCAGGCTCCAGGGAAGGGGCTGGAGTGGGTCTCATCCATTAGTAGTAGTAGTAGTTACATATACTACGCAGACTCAGTGAAGGGCCGATTCACCATCTCCAGAGACAACGCCAAGAACTCACTGTATCTGCAAATGAACAGCCTGAGAGCCGAGGACACGGCTGTGTATTACTGTGCGAGCCAGATATTGTAGTGGTGGTAGCTCCCTATCGGGGAGCTTTTGATATCTGGGGCCAAGGGACAAT")
+            fr1_clone=subextra(fr1_clone)
+
+            res_list1a =clone_kmer_show(K1,fr1_clone)
+ 
+
+        if 'FR1' in frameworks and clones == 2:
+            fr1_clone2 = st.text_input("Framework1 Clone sequence ",\
+                "CTTCTGGAGGCACCTTCAGCAGCTATGCTATCAGCTGGGTGCGACAGGCCCCTGGACAAGGGCTTGAGTGGATGGGAGGGATCATCCCTATCTTTGGTACAGCAAACTACGCACAGAAGTTCCAGGGCAGAGTCACGATTACCGCGGACGAATCCACGAGCACAGCCTACATGGAGCTGAGCAGCCTGAGATCTGAGGACACGGCCGTGTATTACTGTGCGAGAGATAGGCGCGGGGAATGGCCTCCCTCGGATTACTACTACTACTACTACATGGACGTCTGGGGCAAAGGGACCAC")
+            fr1_clone2=subextra(fr1_clone2)
+            res_list1b =clone_kmer_show(K1,fr1_clone2)
         
-        fr3_clone2=subextra(fr3_clone2)
-        fr2_clone2=subextra(fr2_clone2)
-        fr1_clone2=subextra(fr1_clone2)
 
-        #fr_clone = st.text_input("Framework Clone sequence ",\
-        #    "ACACGGCTGTGTATTACTGTGCGAGAGATCTGAGGAACGAAATGGCGGGGGATGGTGCGGGGAGTTAGTCGACTACTACTACTACTACATGTACGTCTGGGGCAAAGGGACCAC")
-        #fr = st.radio('Framework',(1,2,3),2)
-        #fr_clone=subextra(fr_clone)
-        #to_rev_complement=st.radio('reverse complement input',['No','Yes'])
-        #if to_rev_complement == 'Yes':
-        #    fr_clone=str(Seq(fr_clone).reverse_complement())    
-        K3 = st.slider('FR3 Kmer length',10,len(fr1_clone2),27)
-        K2 = st.slider('FR3 Kmer length',10,len(fr1_clone2),57)
-        K1 = st.slider('FR3 Kmer length',10,len(fr1_clone2),77)
+        
+        
+        
         independentK = st.slider('Number of Independent Kmers',1,10,1)        
-        res_list3a =clone_kmer_show(K3,fr3_clone)
-        res_list3b =clone_kmer_show(K3,fr3_clone2)
-        res_list2a =clone_kmer_show(K2,fr2_clone)
-        res_list2b =clone_kmer_show(K2,fr2_clone2)
-        res_list1a =clone_kmer_show(K1,fr1_clone)
-        res_list1b =clone_kmer_show(K1,fr1_clone2)
+        
+        
+        
+    
+        
+        
     else:
         files_to_merge=st.file_uploader('Files to merge',type=[".csv"],accept_multiple_files=True)
 
@@ -131,7 +168,7 @@ with st.form(key='prep'):
     if restart:
         caching.clear_cache()
     
-    submit_button = st.form_submit_button(label='Submit')
+    submit_button2 = st.form_submit_button(label='Submit')
 
 
 def replace_char_at_index(org_str, index, replacement):
@@ -216,7 +253,7 @@ class subclone:
         if not self.see_abundant or self.fr_clone !='' and any(self.clust_clone.seq.str.contains(self.fr_clone)):
             self.abundant_seqfr=self.fr_clone
         else:        
-            self.abundant_seqfr=self.clust_clone.seq.iloc[0]   
+            self.abundant_seqfr=self.fr_clone #self.clust_clone.seq.iloc[0]   
                         
         self.create_visual()
         cola,colb,colc = st.columns(3)
@@ -257,6 +294,7 @@ class subclone:
         ppp1=list()
         cols_show = st.columns(10)
         for x in partclus['seq']:  
+            
             ppp1.append(pairwise2.align.globalms(abundant_seq_or_fr_clone,x,1,-1,-5,0))
             ii+=1
             if ii % 1000 == 0:
@@ -272,45 +310,24 @@ class subclone:
         partclus=partclus.sort_values(['score'])
        
         score_touse=[pairwise2.align.localms(gg.id,clone,1,-1,-5,-1,score_only=True) for gg in aln]
-        
-        scoremax=np.max(score_touse)
-        argscores_touse=np.where(score_touse==scoremax)[0]
-        
-        ### 0108 this used to be pairwise2.align.localms(aln[argscore_touse].seq,clone,1,-1,-5,0)
-        ids_backinto_sequences=[aln[jj].id for jj in argscores_touse]
-        
-        align_toclone_togettruncation=[pairwise2.align.localms(id,clone,1,-1,-5,0) for id in ids_backinto_sequences]
-        startpoints =[jj[0].start for jj in align_toclone_togettruncation]
-        argscore_touse=argscores_touse[np.argmax(startpoints)]
-        align_toclone_togettruncation=align_toclone_togettruncation[np.argmax(startpoints)]
-        clipright=0
-       
-        clipleft=align_toclone_togettruncation[0].start
-        if clipleft == 1:
-            clipleft = 0
-
-        
-        ## added 0108
-        #makesurewedonotneedtotrimseq=align_toclone_togettruncation=pairwise2.align.localms(aln[argscore_touse].seq,clone,1,-1,-5,-1)
-        #if makesurewedonotneedtotrimseq[0].start > 0:
-            #st.write('SEQ MAY NEED TRIM')
-            #pdb.set_trace()
-        #### 
   
         aln_sortbyscore=[hh[0] for hh in zip(aln,score_touse) if not hh[1]<=(len(clone)*self.must_be_identical_percent )]
         
         st.write('keep ',str(len(aln_sortbyscore))+ 'kmer matches, filter '+str(np.sum([s <=(len(clone)* self.must_be_identical_percent ) for s in score_touse]))+' after pairwise alignment')
         
 
-        if len(aln_sortbyscore)>1:
-            aln=aln_sortbyscore
+        #if len(aln_sortbyscore)>1:
+        partclus=partclus[np.array(score_touse)>=len(clone)*self.must_be_identical_percent]
+        aln=aln_sortbyscore
+        
+        #partclus= 
             #partclus=partclus[np.array(score_touse)>len(clone)-30]
         
-        return partclus, aln, clipleft, clipright
+        return partclus, aln #, clipleft, clipright
 
     def create_visual(self):
         with st.spinner('formatting framework sequences for '+ str(self.clust_clone.shape[0])+' sequences and calculating alignment scores'):    
-            part1, aln1, _cl,_cr = self.get_partclus_and_aln(self.clust_clone,self.fr_clone,self.abundant_seqfr)            
+            part1, aln1 = self.get_partclus_and_aln(self.clust_clone,self.fr_clone,self.abundant_seqfr)            
         
         if len(aln1)>1:
             tallysum, subcloneseqsfr=view_alignment(aln1, self.abundant_seqfr,self.fr) 
@@ -320,40 +337,23 @@ class subclone:
 
 
 
-if detectormerge == 'Detect and quantify subclones in one framework' and seq_file3a is not None and fr3_clone2 != '':
+if detectormerge == 'Detect and quantify subclones in one framework' and  submit_button2: #seq_file3a is not None and fr3_clone2 != '':
     
-    for seq_filea, seqfileb,seqfilec,reslista,reslistb,fr_clone1,fr_clone2,must_be_identical_percent in zip([seq_file3a, seq_file2a, seq_file1a],[seq_file3b,seq_file2b,seq_file1b],[seq_file3c,seq_file2c,seq_file1c],[res_list3a,res_list2a,res_list1a],[res_list3b,res_list2b,res_list1b], [fr3_clone,fr2_clone,fr1_clone],[fr3_clone2,fr2_clone2,fr1_clone2],[0.75,0.85,0.89]):
+    for seq_filea, seq_fileb,seq_filec,reslista,reslistb,fr_clone1,fr_clone2,fr,must_be_identical_percent in zip(['seq_file3a', 'seq_file2a', 'seq_file1a'],['seq_file3b','seq_file2b','seq_file1b'],['seq_file3c','seq_file2c','seq_file1c'],['res_list3a','res_list2a','res_list1a'],['res_list3b','res_list2b','res_list1b'], ['fr3_clone','fr2_clone','fr1_clone'],['fr3_clone2','fr2_clone2','fr1_clone2'],[3,2,1],[0.75,0.85,0.89]):
 
-        subclone_obj3a1=subclone(seq_filea,3,reslista,independentK, fr_clone1,must_be_identical_percent)
-        subclone_obj3a1.first(3,reslistb,independentK, fr_clone2)
-        subclone_obj3b1=subclone(seqfileb,3,reslista,independentK, fr_clone1,must_be_identical_percent)
-        subclone_obj3b1.first(3,reslistb,independentK, fr_clone2)
-        subclone_obj3c1=subclone(seqfilec,3,reslista,independentK, fr_clone1,must_be_identical_percent)
-        subclone_obj3c1.first(3,reslistb,independentK, fr_clone2)      
-    #subclone_obj3b1=subclone(seq_fileb ,3,res_list3a,independentK, fr3_clone)
-    #subclone_obj3b1.first(3,res_list3b,independentK, fr3_clone2)
-
-    #subclone_obj3c1=subclone(seq_file3c ,3,res_list3a,independentK, fr3_clone)
-    #subclone_obj3c1.first(3,res_list3b,independentK, fr3_clone2)
-
-    #subclone_obj2a1=subclone(seq_file2a,2,res_list2a,independentK, fr2_clone)
-    #subclone_obj2a2=subclone(seq_file2a,2,res_list2b,independentK, fr2_clone2)   
-
-    #subclone_obj2b1=subclone(seq_file2b,2,res_list2a,independentK, fr2_clone)
-    #subclone_obj2b2=subclone(seq_file2b,2,res_list2b,independentK, fr2_clone2) 
-
-    #subclone_obj2c1=subclone(seq_file2c,2,res_list2a,independentK, fr2_clone)
-    #subclone_obj2c2=subclone(seq_file2c,2,res_list2b,independentK, fr2_clone2) 
-
-    #subclone_obj1a1=subclone(seq_file1a,1,res_list3a,independentK, fr1_clone)
-    #subclone_obj1a2=subclone(seq_file1a,1,res_list3b,independentK, fr1_clone2)  
-
-    #subclone_obj1b1=subclone(seq_file1b,1,res_list3a,independentK, fr1_clone)
-    #subclone_obj1b2=subclone(seq_file1b,1,res_list3b,independentK, fr1_clone2)  
-
-    #subclone_obj1c1=subclone(seq_file1c,1,res_list3a,independentK, fr1_clone)
-    #subclone_obj1c2=subclone(seq_file1c,1,res_list3b,independentK, fr1_clone2)  
-
+        if seq_filea in globals():
+            
+            subclone_obja1=subclone(getattr(sys.modules[__name__], seq_filea),fr,getattr(sys.modules[__name__], reslista),independentK, getattr(sys.modules[__name__], fr_clone1),must_be_identical_percent)
+            if fr_clone2 in globals():
+                subclone_obja1.first(fr,getattr(sys.modules[__name__],reslistb),independentK, getattr(sys.modules[__name__],fr_clone2))   
+        if seq_fileb in globals():
+            subclone_objb1=subclone(getattr(sys.modules[__name__],seq_fileb),fr,getattr(sys.modules[__name__],reslista),independentK, getattr(sys.modules[__name__],fr_clone1),must_be_identical_percent)
+            if fr_clone2 in globals():
+                subclone_objb1.first(fr,getattr(sys.modules[__name__],reslistb),independentK, getattr(sys.modules[__name__],fr_clone2))   
+        if seq_filec in globals():
+            subclone_objc1=subclone(getattr(sys.modules[__name__],seq_filec),fr,getattr(sys.modules[__name__],reslista),independentK, getattr(sys.modules[__name__],fr_clone1),must_be_identical_percent)
+            if fr_clone2 in globals():
+                subclone_objc1.first(fr,getattr(sys.modules[__name__],reslistb),independentK, getattr(sys.modules[__name__],fr_clone2)   )
 
 
 elif files_to_merge is not None:
