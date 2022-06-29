@@ -56,7 +56,7 @@ def convert_df(fr_df):
 
 def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=False):
     """Bokeh sequence alignment view"""
-    
+     
     consensus_sequence=useconsensus
     
     #seqs = [[rec.seq] * int(np.ceil(int(rec.description))) for rec in (aln)]
@@ -64,8 +64,8 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
     forfileinsert = [rec.annotations['insert'] for rec in aln]
     seqs = [rec.seq for rec in (aln)]
     counts = [int(np.ceil(int(rec.description))) for rec in (aln)]
-    alnscores = [np.float(rec.name) for rec in (aln)]
-
+    alnscores = [int(np.float(rec.name)) for rec in (aln)]
+    alnscores = np.asarray(alnscores,dtype='int64')
     
     ids = np.arange(0,len(seqs))
     ids=np.char.mod('%d', ids)
@@ -121,7 +121,9 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
 
       uniqdf=np.array(uniqdf)
       countsforlink=counts.copy()
-      countsforlink[np.argmax(countsforlink)]=1
+
+      if np.argmax(alnscores) == np.argmax(countsforlink) and  np.max(countsforlink)>300:
+        countsforlink[np.argmax(countsforlink)]=1
       
       dfwcountnomain=np.repeat(uniqdf,countsforlink,axis=0)
       mismatchmutatedspotsuse=np.sum(dfwcountnomain != 0,axis=0)/dfwcountnomain.shape[0] > 0.01
@@ -140,7 +142,7 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
         #uniqdftouseindendo[scipy.cluster.hierarchy.leaves_list(Z2)]
         #induniq[scipy.cluster.hierarchy.leaves_list(Z2)]
       st.write('done with distance computation')
-  
+      
       countsforlink =countsforlink[scipy.cluster.hierarchy.leaves_list(Z2)] 
       counts=counts[scipy.cluster.hierarchy.leaves_list(Z2)] 
       
@@ -149,31 +151,41 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
       forfileinsert=np.array(forfileinsert)[scipy.cluster.hierarchy.leaves_list(Z2)]
       strc=[str(hhh) if hhh>10 else '' for hhh in counts]
       ugg=ugg[scipy.cluster.hierarchy.leaves_list(Z2)] 
+      alnscores=alnscores[scipy.cluster.hierarchy.leaves_list(Z2)]
 
       #R = dendrogram(Z2, orientation="left",leaf_font_size=6,labels=strc)
-
+      
       uniqdf= np.array(uniqdf)[scipy.cluster.hierarchy.leaves_list(Z2)]
       
       countview = counts.copy()
-      countview[np.argmax(counts)]=1
+      #if np.max(counts)>300:
+      #  countview[np.argmax(counts)]=1
+      
       countview_fordf = np.repeat(counts,countview)
       dfwcounts = np.repeat(uniqdf,countsforlink ,axis=0)
-      
+      countview_alnscores=np.repeat(alnscores,countsforlink,axis=0)
 
       uniqtocolors=np.repeat(ugg,countsforlink ,axis=0) 
       
-      uniqtocolors[np.argmax(countview_fordf)]=['purple']*uniqtocolors.shape[1]
-
+      
+      #uniqtocolors[np.argmax(countview_fordf)]=['purple']*uniqtocolors.shape[1]
+      
+      if np.max(countview_alnscores) >= len(consensus_sequence)-10:
+        uniqtocolors[np.argmax(countview_alnscores)]=['purple']*uniqtocolors.shape[1]
+      else:
+        uniqtocolors[np.argmax(countview_alnscores)]=['green']*uniqtocolors.shape[1]  
+      
 
     
     if len(forfileinsert) == 1:
-      table_of_sequences=pd.DataFrame({'sequence': seqs,'sequenceNotformatted': forfileseqs,'numberobserved':counts,'inserts':forfileinsert})
+      table_of_sequences=pd.DataFrame({'sequence': seqs,'sequenceNotformatted': forfileseqs,'numberobserved':counts,'inserts':forfileinsert, 'alnscores':alnscores,'mother_clone':consensus_sequence})
     else:
-      table_of_sequences=pd.DataFrame({'sequence': seqs,'sequenceNotformatted': forfileseqs,'numberobserved':counts,'inserts':forfileinsert.tolist()})
+      table_of_sequences=pd.DataFrame({'sequence': seqs,'sequenceNotformatted': forfileseqs,'numberobserved':counts,'inserts':forfileinsert.tolist(),'alnscores':alnscores,'mother_clone':consensus_sequence})
     st.download_button(label='proper order Download',data=convert_df(table_of_sequences),file_name='unique_data.csv',mime='text/csv',key=random()) 
 
     seqs_for_view = np.repeat(seqs,countsforlink) 
     for_file_seqs_view = np.repeat(forfileseqs,countsforlink)
+    #alnscores_for_view=np.repeat(alnscores,countsforlink)
     ## 03/26
     incrementforview = int(np.round(seqs_for_view.shape[0]/1000))
     #incrementforview = 1
@@ -181,9 +193,11 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
 
     if incrementforview > 1:
       indsview= np.arange(0,seqs_for_view.shape[0],incrementforview)
-      indsview= np.append(indsview, np.argmax(countview_fordf))
+      #indsview= np.append(indsview, np.argmax(countview_fordf))
+      indsview= np.append(indsview,np.argmax(countview_alnscores))
       indsview=np.sort(np.unique(indsview))
       seqs_for_view =seqs_for_view[indsview]
+      #alnscores_for_view=alnscores_for_view[indsview]
       uniqtocolors = uniqtocolors[indsview]
       for_file_seqs_view = for_file_seqs_view[indsview]
 
@@ -237,6 +251,7 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
     with st.expander('alignment view'):
 
       # 03/31 Kevins clustering and feature addition
+      
       table_of_sequences_with_clusters_and_features = KevinsFunction(table_of_sequences)
       
       
