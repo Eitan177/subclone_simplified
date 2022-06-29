@@ -6,8 +6,9 @@ from sklearn.svm import OneClassSVM
 from scipy.signal import savgol_filter, find_peaks
 from sklearn.cluster import DBSCAN
 from Bio import pairwise2, motifs
+import streamlit as st
 import numpy as np
-
+import pdb
 
 def file_path_generation(sample_number):
     """
@@ -223,9 +224,12 @@ def new_metrics(data):
     """
 
     # Mother Clone Identification
-    row_of_max_observed = data['numberobserved'].idxmax()
-    mother_sequence = data['sequence'][row_of_max_observed]
-
+    # row_of_max_observed = data['numberobserved'].idxmax()
+    row_of_max_observed = np.argmax(data['alnscores'])
+    #mother_sequence = data['sequence'][row_of_max_observed]
+    #mother_sequence = data['sequence'][np.argmax(data['alnscores'])]
+    mother_sequence = data['mother_clone'].iloc[0]
+    #pdb.set_trace()
     # Number of deletions that appear in each sequence
     data['deletion_count'] = get_total_deletions(data)
 
@@ -245,22 +249,24 @@ def new_metrics(data):
 
 def add_in_outlier_from_suspicious_mismatch(data, outliers_list):
     suspicious_mismatch_results = data['suspicious_mismatch'].tolist()
-    smoothed_results = savgol_filter(suspicious_mismatch_results, window_length=15, polyorder=1)
+    
+    smoothed_results = savgol_filter(suspicious_mismatch_results, window_length=np.min((len(suspicious_mismatch_results), 5)), polyorder=1)
     peaks, properties = find_peaks(smoothed_results, prominence=1)
     # Generates out plot for analysis
-    # print(smoothed_results)
-    # plt.plot(list(np.arange(0, len(smoothed_results))), smoothed_results)
-    # plt.plot(list(np.arange(0, len(smoothed_results))), suspicious_mismatch_results)
-    # plt.plot(peaks, smoothed_results[peaks], "x")
-    # plt.show()
+    print(smoothed_results)
+    #fig, ax = plt.subplots()
+    #ax.pyplot(list(np.arange(0, len(smoothed_results))), smoothed_results)
+    #ax.pyplot(list(np.arange(0, len(smoothed_results))), suspicious_mismatch_results)
+    #ax.plot(peaks, smoothed_results[peaks], "x")
+    #st.write(fig)
 
     new_outliers_list = outliers_list.copy()
 
     for individual_peak in peaks:
-        search_area = suspicious_mismatch_results[individual_peak - 7: individual_peak + 7]
+        search_area = suspicious_mismatch_results[individual_peak - 2: individual_peak + 2]
         max_value = max(search_area)
         max_index = search_area.index(max_value)
-        new_outliers_list[(individual_peak + max_index - 7)] = 2
+        new_outliers_list[(individual_peak + max_index - 2)] = 2
     return new_outliers_list
 
 
@@ -298,7 +304,8 @@ def outlier_detection(file):
     """
 
     outlier_from_number_observed = data_with_new_metrics['numberobserved'].tolist()
-    smoothed_results = savgol_filter(outlier_from_number_observed, window_length=31, polyorder=1)
+    
+    smoothed_results = savgol_filter(outlier_from_number_observed, window_length=np.min((len(outlier_from_number_observed),31)), polyorder=1)
     peaks, properties = find_peaks(smoothed_results, prominence=1)
     # Generates out plot for analysis
     # print(smoothed_results)
@@ -322,12 +329,13 @@ def outlier_detection(file):
     df_insert_sequenceNotFormatted = data_with_insertion.loc[
         data_with_insertion['numberobserved'] >= df_insert_mean + df_insert_std]
     df_with_deletion_sequenceNotFormatted = data_with_deletion.loc[
-        data_with_deletion['numberobserved'] >= df_deletion_mean + df_deletion_std]
+        data_with_deletion['numberobserved'] >= df_deletion_mean + 0.5*df_deletion_std]
 
     for outlier_count in df_insert_sequenceNotFormatted['sequenceNotformatted'].index.tolist():
         outliers_list[outlier_count] = 1
     for outlier_count in df_with_deletion_sequenceNotFormatted['sequenceNotformatted'].index.tolist():
         outliers_list[outlier_count] = 1
+    
     outliers_list = add_in_outlier_from_suspicious_mismatch(data_with_new_metrics, outliers_list)
     data['outliers'] = outliers_list
     outlier_sequential = []
@@ -370,6 +378,7 @@ def partition(data, outliers, outlier_type):
         best_outlier_position = -1
         outlier_seq_pos = 2 * len(sequences)
         sequence_no_dash = sequence.replace("-", "")
+        
         for outlier_count in range(len(initial_outlier_class_corresponding_sequence)):
             alignments = pairwise2.align.globalms(sequence_no_dash, initial_outlier_class_corresponding_sequence[outlier_count].replace("-", ""), 1, -1, -1, 0, score_only=True)
             if len(sequence_no_dash) - alignments < outlier_score:
@@ -427,19 +436,21 @@ def partitionV2(data, outliers, outlier_type, variantoutliers):
         outlier_score = len(sequence)
         best_outlier_position = -1
         outlier_seq_pos = 2 * len(sequences_pass1)
-        sequence_no_dash = sequence.replace("-", "")
+        sequence_no_dash = sequence.replace("-", "-")
         for outlier_count in range(len(variantoutliers)):
             alignments = pairwise2.align.globalms(sequence_no_dash,
                                                   variantoutliers[outlier_count].replace(
-                                                      "-", ""), 1, -1, -1, 0, score_only=True)
-            if len(sequence_no_dash) - alignments < outlier_score:
-                outlier_score = len(sequence_no_dash) - alignments
-                best_outlier_position = initial_outlier_class[outlier_count]
-                outlier_seq_pos = initial_outlier_index[outlier_count]
-            if len(sequence_no_dash) - alignments == outlier_score:
-                if outlier_seq_pos - count > initial_outlier_class[outlier_count] - count:
+                                                      "-", "-"), 1, -1, -1, 0, score_only=True)
+
+            if alignments != []:                                        
+                if len(sequence_no_dash) - alignments < outlier_score:
+                    outlier_score = len(sequence_no_dash) - alignments
                     best_outlier_position = initial_outlier_class[outlier_count]
-                    outlier_seq_pos = initial_outlier_class[outlier_count]
+                    outlier_seq_pos = initial_outlier_index[outlier_count]
+                if len(sequence_no_dash) - alignments == outlier_score:
+                    if outlier_seq_pos - count > initial_outlier_class[outlier_count] - count:
+                        best_outlier_position = initial_outlier_class[outlier_count]
+                        outlier_seq_pos = initial_outlier_class[outlier_count]
         closest_match.append(best_outlier_position)
         count += 1
 
@@ -514,16 +525,30 @@ def process_fasta_from_ebi(fasta_file_path, data):
 def KevinsFunction(table_of_sequences):
     table_of_sequences['inserts']=table_of_sequences['inserts'].apply(lambda x: str(x))
     data, found_outlier, outlier_type = outlier_detection(table_of_sequences)
-    """
-   outlierseq = data[data[['outliers', 'somatic_mutations']].apply(lambda x: x[0] == 1 and x[1] == 0, axis=1)].sequence.apply(lambda x: Seq(x))
+    outlierseq = data[data[['outliers', 'somatic_mutations']].apply(lambda x: x[0] == 1 and x[1] == 0, axis=1)].sequence.apply(lambda x: Seq(x))
     outlierseqlist = outlierseq.tolist()
-    outlierseqmotif = motifs.create(outlierseqlist)
-    mutated_positions = np.where([not (a == 18 or c == 18 or t == 18 or g == 18) for a, c, g, t in zip(outlierseqmotif.counts['A'], outlierseqmotif.counts['C'], outlierseqmotif.counts['G'], outlierseqmotif.counts['T'])])[0]
+    print(outlierseqlist)
+    
+    outlierseqmotif = motifs.create(outlierseqlist,alphabet='ACGT-')
+    
+    motifcount= pd.DataFrame(outlierseqmotif.counts).apply(lambda x: sum(x), axis=1)[0]
+    
+    mutated_positions = np.where([not (a == motifcount or c == motifcount or t == motifcount or g == motifcount) for a, c, g, t in zip(outlierseqmotif.counts['A'], outlierseqmotif.counts['C'], outlierseqmotif.counts['G'], outlierseqmotif.counts['T'])])[0]
     seq_onlymutated = data.sequence.apply(lambda x: ''.join([x[i] for i in mutated_positions]))
-    data['variantseq'] = seq_onlymutated
+    
+    
+    #if len(outlierseq)>1:
+    #    outlierseqmutated = outlierseq.apply(lambda x: ''.join([str(x)[i] for i in mutated_positions])).tolist()
+    #    outlierseqmutated = [i for i in outlierseqmutated if i.count('-')!=len(i)]
+    #    data['variantseq'] = seq_onlymutated
+    #else:
+    #    outlierseqmutated = outlierseqlist
+    #    data['variantseq'] =data.sequence
+
     outlierseqmutated = outlierseq.apply(lambda x: ''.join([str(x)[i] for i in mutated_positions])).tolist()
-    """
+    data['variantseq'] = seq_onlymutated
     v_gene_data = process_fasta_from_ebi('Vs.fasta', data)
-    #partitioned_data = partitionV2(v_gene_data, found_outlier, outlier_type, outlierseqmutated)
-    partitioned_data = partition(v_gene_data, found_outlier, outlier_type)
+    
+    partitioned_data = partitionV2(v_gene_data, found_outlier, outlier_type, outlierseqmutated)
+    
     return(partitioned_data)
