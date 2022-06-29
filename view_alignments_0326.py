@@ -36,7 +36,7 @@ def make_alignmentplotwithcluster(aln_pd, useconsensus,fr=1,fontsize="9pt", plot
     aln = list()
     for ind, row in aln_pd.iterrows():
 
-        aln.append(SeqRecord(seq=row['sequence'],name=str(row['closest match']),description=str(row['numberobserved']),id=str(row['outliers']),annotations={'seq':row['sequence'],'insert':row['inserts']}))
+        aln.append(SeqRecord(seq=row['sequence'],name=str(row['closest match']),description=str(row['numberobserved']),id=str(row['outliers']),annotations={'seq':row['sequence'],'insert':row['inserts'],'alnscores':row['alnscores']}))
 
 
     consensus_sequence=useconsensus
@@ -46,33 +46,38 @@ def make_alignmentplotwithcluster(aln_pd, useconsensus,fr=1,fontsize="9pt", plot
     forfileinsert = np.array([rec.annotations['insert'] for rec in aln])
     seqs = np.array([rec.seq for rec in (aln)])
     counts = [int(np.ceil(int(rec.description))) for rec in (aln)]
-    alnscores = np.array([np.float(rec.name) for rec in (aln)])
+    alnscores = np.array([rec.annotations['alnscores'] for rec in aln])
+    closest_match = np.array([np.float(rec.name) for rec in (aln)])
     subclonecall = np.array([float(rec.id) for rec in aln])
-    if len(set(alnscores)) <= 11 and len(set(alnscores)) >= 3:
-        subclonecolors=Viridis[len(set(alnscores))]
-    elif len(set(alnscores)) > 11 and len(set(alnscores))<14: 
+    if len(set(closest_match)) <= 11 and len(set(closest_match)) >= 3:
+        subclonecolors=Viridis[len(set(closest_match))]
+    elif len(set(closest_match)) > 11 and len(set(closest_match))<14: 
         
-        subclonecolors=Viridis[11]+Cividis[3][0:len(set(alnscores))-11]  
-    elif len(set(alnscores)) >= 14 and len(set(alnscores)) <= 22:
-        subclonecolors=Viridis[11]+Cividis[len(set(alnscores))-11]
-    elif len(set(alnscores)) > 22 and len(set(alnscores))<= 24:  
-        subclonecolors=Magma[11]+Viridis[11]+Cividis[3][0:len(set(alnscores))-22]
-    elif len(set(alnscores)) >= 24 and len(set(alnscores)) <= 32:
-        subclonecolors = Magma[11] + Viridis[11] + Cividis[len(set(alnscores)) - 22]
-    elif len(set(alnscores)) >= 33:
+        subclonecolors=Viridis[11]+Cividis[3][0:len(set(closest_match))-11]  
+    elif len(set(closest_match)) >= 14 and len(set(closest_match)) <= 22:
+        subclonecolors=Viridis[11]+Cividis[len(set(closest_match))-11]
+    elif len(set(closest_match)) > 22 and len(set(closest_match))<= 24:  
+        subclonecolors=Magma[11]+Viridis[11]+Cividis[3][0:len(set(closest_match))-22]
+
+    elif len(set(closest_match)) >= 24 and len(set(closest_match)) <= 32:
+        subclonecolors = Magma[11] + Viridis[11] + Cividis[len(set(closest_match)) - 22]
+
+    elif len(set(closest_match)) >= 33 and len(set(closest_match))<240:
         cc = Magma[11] + Viridis[11] + Cividis[10] + Magma[11] + Viridis[11] + Cividis[10] + Magma[11] + Viridis[11] + \
          Cividis[10] + Magma[11] + Viridis[11] + Cividis[10] + Magma[11] + Viridis[11] + Cividis[10] + Magma[11] + Viridis[11] + Cividis[10] + Magma[11] + Viridis[11] + Cividis[10] + Magma[11] + Viridis[11]
-        subclonecolors = cc[0:len(set(alnscores))]
+        subclonecolors = cc[0:len(set(closest_match))]
+
     else:
-        subclonecolors = Cividis[3][0:len(set(alnscores))]
+        subclonecolors = np.tile(Cividis[11],500)[0:len(set(closest_match))]
+    st.write(str(len(set(closest_match)))+' subclones identified')
      
     colors=get_colors_consensus(seqs,consensus_sequence)
     
     gg=np.array(colors).reshape((-1, len(seqs[0])))
     
     
-    #pdb.set_trace()
-    subclonecolormatch = np.repeat([subclonecolors[int(ii)] for ii in alnscores],5).reshape(-1,5)
+   
+    subclonecolormatch = np.repeat([subclonecolors[int(ii)] for ii in closest_match],5).reshape(-1,5)
     
 
     gg=np.hstack((gg,subclonecolormatch))
@@ -90,6 +95,7 @@ def make_alignmentplotwithcluster(aln_pd, useconsensus,fr=1,fontsize="9pt", plot
         gg=gg[contiguous_color_order]
         forfileinsert=forfileinsert[contiguous_color_order]
         alnscores= alnscores[contiguous_color_order]
+        closest_match= closest_match[contiguous_color_order]
         counts=np.array(counts)[contiguous_color_order]
         seqs= seqs[contiguous_color_order]
         subclonecall=subclonecall[contiguous_color_order]
@@ -101,9 +107,9 @@ def make_alignmentplotwithcluster(aln_pd, useconsensus,fr=1,fontsize="9pt", plot
     
     gg_subc=gg.copy()
     
-    for ii in set(alnscores):
+    for ii in set(closest_match):
         
-        gg_subc[alnscores==ii] =gg[np.logical_and(alnscores==ii ,subclonecall>0)]
+        gg_subc[closest_match==ii] =gg[np.logical_and(closest_match==ii ,subclonecall>0)]
     
 
     
@@ -142,7 +148,10 @@ def make_alignmentplotwithcluster(aln_pd, useconsensus,fr=1,fontsize="9pt", plot
 
       uniqdf=np.array(uniqdf)
       countsforlink=counts.copy()
-      countsforlink[np.argmax(countsforlink)]=np.ceil((sum(counts)-max(counts))/500)
+      
+      if np.argmax(alnscores) == np.argmax(countsforlink) and np.max(countsforlink)>100:
+        countsforlink[np.argmax(countsforlink)]=np.ceil((sum(counts)-max(counts))/100)
+
       
       dfwcountnomain=np.repeat(uniqdf,countsforlink,axis=0)
       mismatchmutatedspotsuse=np.sum(dfwcountnomain != 0,axis=0)/dfwcountnomain.shape[0] > 0.01
@@ -194,11 +203,16 @@ def make_alignmentplotwithcluster(aln_pd, useconsensus,fr=1,fontsize="9pt", plot
       justsubc_tocolors=np.repeat(gg_subc,countsforlink ,axis=0) 
       forfileseqs = np.repeat(forfileseqs,countsforlink)
       forfileinsert=np.repeat(forfileinsert,countsforlink)
-      
       alnscores=np.repeat(alnscores,countsforlink)
-      uniqtocolors[np.where(countview_fordf==np.max(countview_fordf)),0:(uniqtocolors.shape[1]-5) ]=['purple']
-      justsubc_tocolors[np.where(countview_fordf==np.max(countview_fordf)),0:(justsubc_tocolors.shape[1]-5) ]=['purple']
-
+      closest_match=np.repeat(closest_match,countsforlink)
+      countview_alnscores = alnscores
+      #uniqtocolors[np.where(countview_fordf==np.max(countview_fordf)),0:(uniqtocolors.shape[1]-5) ]=['purple']
+      #justsubc_tocolors[np.where(countview_fordf==np.max(countview_fordf)),0:(justsubc_tocolors.shape[1]-5) ]=['purple']
+      
+      if np.max(alnscores) >= len(consensus_sequence)-10:
+        uniqtocolors[np.where(countview_alnscores==np.max(countview_alnscores)),0:(uniqtocolors.shape[1]-5) ]=['purple']
+      else:
+        uniqtocolors[np.where(countview_alnscores==np.max(countview_alnscores)),0:(uniqtocolors.shape[1]-5) ]=['green']
 
       seqs_for_view = np.repeat(seqs,countsforlink) 
     
@@ -213,7 +227,8 @@ def make_alignmentplotwithcluster(aln_pd, useconsensus,fr=1,fontsize="9pt", plot
     
     if incrementforview > 1:
       indsview= np.arange(0,seqs_for_view.shape[0],incrementforview)
-      indsview= np.append(indsview, np.argmax(countview_fordf))
+      #indsview= np.append(indsview, np.argmax(countview_fordf))
+      indsview= np.append(indsview,np.argmax(countview_alnscores))
       indsview=np.sort(np.unique(indsview))
       if len(np.where(justsubc_tocolors=='teal')[0]) > 0 and len(np.where(justsubc_tocolors=='teal')[0]) < 100:
           indsview=np.append(indsview,np.repeat(np.where(justsubc_tocolors=='teal')[0][0],5))
@@ -221,12 +236,13 @@ def make_alignmentplotwithcluster(aln_pd, useconsensus,fr=1,fontsize="9pt", plot
       seqs_for_view =seqs_for_view[indsview]
       uniqtocolors = uniqtocolors[indsview]
       alnscores=alnscores[indsview]
+      closest_match=closest_match[indsview]
       justsubc_tocolors = justsubc_tocolors[indsview]
       
       forfileseqs = forfileseqs[indsview]
       forfileinsert=forfileinsert[indsview]
     
-    st.download_button(label='sequences in alignment shown',data=convert_df(pd.DataFrame({'sequence': seqs_for_view,'sequenceNotformatted': forfileseqs,'inserts':forfileinsert.tolist(),'group':alnscores})),file_name='alignmenview_sequences_'+str(fr)+'.csv',mime='text/csv',key=np.random.rand()) 
+    st.download_button(label='sequences in alignment shown',data=convert_df(pd.DataFrame({'sequence': seqs_for_view,'sequenceNotformatted': forfileseqs,'inserts':forfileinsert.tolist(),'group':closest_match,'alnscore':alnscores})),file_name='alignmenview_sequences_'+str(fr)+'.csv',mime='text/csv',key=np.random.rand()) 
 
 
     colors_for_view=np.flip(uniqtocolors,axis=1).ravel().tolist()
