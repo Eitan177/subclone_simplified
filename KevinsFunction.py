@@ -224,9 +224,12 @@ def new_metrics(data):
     """
 
     # Mother Clone Identification
-    row_of_max_observed = data['numberobserved'].idxmax()
-    mother_sequence = data['sequence'][row_of_max_observed]
-
+    # row_of_max_observed = data['numberobserved'].idxmax()
+    row_of_max_observed = np.argmax(data['alnscores'])
+    #mother_sequence = data['sequence'][row_of_max_observed]
+    #mother_sequence = data['sequence'][np.argmax(data['alnscores'])]
+    mother_sequence = data['mother_clone'].iloc[0]
+    #pdb.set_trace()
     # Number of deletions that appear in each sequence
     data['deletion_count'] = get_total_deletions(data)
 
@@ -527,6 +530,7 @@ def KevinsFunction(table_of_sequences):
     print(outlierseqlist)
     
     outlierseqmotif = motifs.create(outlierseqlist,alphabet='ACGT-')
+    
     motifcount= pd.DataFrame(outlierseqmotif.counts).apply(lambda x: sum(x), axis=1)[0]
     
     mutated_positions = np.where([not (a == motifcount or c == motifcount or t == motifcount or g == motifcount) for a, c, g, t in zip(outlierseqmotif.counts['A'], outlierseqmotif.counts['C'], outlierseqmotif.counts['G'], outlierseqmotif.counts['T'])])[0]
