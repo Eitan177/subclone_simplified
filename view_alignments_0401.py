@@ -256,16 +256,28 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
       
       
       table_of_sequences_with_clusters_and_features_without_unassigned =table_of_sequences_with_clusters_and_features[table_of_sequences_with_clusters_and_features['closest match']!= -1]
-      if len(table_of_sequences_with_clusters_and_features_without_unassigned)>0:
-        table_of_sequences_with_clusters_and_features=table_of_sequences_with_clusters_and_features_without_unassigned
+      
+      
+      table_of_sequences_with_clusters_and_features_just_unassigned =table_of_sequences_with_clusters_and_features[table_of_sequences_with_clusters_and_features['closest match']== -1]
+      
+      #if len(table_of_sequences_with_clusters_and_features_without_unassigned)>0:
+      #  table_of_sequences_with_clusters_and_features=table_of_sequences_with_clusters_and_features_without_unassigned
       
       # table_of_sequences_with_clusters_and_features.to_csv("R540_FR1.csv")
       # table_of_sequences_with_clusters_and_features = pd.read_csv("R540_FR1.csv")
       
-      table_of_outliers=table_of_sequences_with_clusters_and_features.groupby(['closest match']).apply(lambda x: np.array((x['sequence'][x['outliers'] > 0].iloc[0],sum(x['numberobserved']),x['index_mismatch'][x['outliers'] > 0].iloc[0],x['homology_against_mother_clone'][x['outliers'] > 0].iloc[0],x['inserts'][x['outliers'] > 0].iloc[0],x['sequenceNotformatted'][x['outliers'] > 0].iloc[0],len(x['sequence'][x['outliers'] > 0].iloc[0]),len(x['sequenceNotformatted'][x['outliers'] > 0].iloc[0]),x['v-genes'][x['outliers'] > 0].iloc[0])))
+      table_of_outliers=table_of_sequences_with_clusters_and_features_without_unassigned.groupby(['closest match']).apply(lambda x: np.array((x['sequence'][x['outliers'] > 0].iloc[0],sum(x['numberobserved']),x['index_mismatch'][x['outliers'] > 0].iloc[0],x['homology_against_mother_clone'][x['outliers'] > 0].iloc[0],x['inserts'][x['outliers'] > 0].iloc[0],x['sequenceNotformatted'][x['outliers'] > 0].iloc[0],len(x['sequence'][x['outliers'] > 0].iloc[0]),len(x['sequenceNotformatted'][x['outliers'] > 0].iloc[0]),x['v-genes'][x['outliers'] > 0].iloc[0])))
       
+
+
       table_w_sequence_and_count= pd.DataFrame({'seq':np.vstack(table_of_outliers).T[0],'sum of counts': [np.int(ii) for ii in np.vstack(table_of_outliers).T[1]],\
         'discrepant_positions': [str([np.int(jj) for jj in ii]) for ii in np.vstack(table_of_outliers).T[2]],'mother_clone_distance':np.vstack(table_of_outliers).T[3],'insertpositions': np.vstack(table_of_outliers).T[4], 'notformatted':np.vstack(table_of_outliers).T[5],'length':np.vstack(table_of_outliers).T[6],'unformattedlength':np.vstack(table_of_outliers).T[7],'V-gene':np.vstack(table_of_outliers).T[8]}) 
+      if len(table_of_sequences_with_clusters_and_features_just_unassigned)>0:
+        table_w_sequence_and_count_unassigned=pd.DataFrame({'seq':table_of_sequences_with_clusters_and_features_just_unassigned['sequence'],'sum of counts': table_of_sequences_with_clusters_and_features_just_unassigned['numberobserved'],\
+        'discrepant_positions': table_of_sequences_with_clusters_and_features_just_unassigned['index_mismatch'].apply(lambda x: str(x)),'mother_clone_distance':table_of_sequences_with_clusters_and_features_just_unassigned['homology_against_mother_clone'], 'insertpositions':table_of_sequences_with_clusters_and_features_just_unassigned['inserts'],  'notformatted':table_of_sequences_with_clusters_and_features_just_unassigned['sequenceNotformatted'],\
+        'length':table_of_sequences_with_clusters_and_features_just_unassigned['sequence'].apply(lambda x: len(x)),'unformattedlength':table_of_sequences_with_clusters_and_features_just_unassigned['sequenceNotformatted'].apply(lambda x: len(x)),'V-gene':table_of_sequences_with_clusters_and_features_just_unassigned['v-genes']})
+        table_w_sequence_and_count = pd.concat([table_w_sequence_and_count,table_w_sequence_and_count_unassigned])
+        
       
       make_alignmentplotwithcluster(table_of_sequences_with_clusters_and_features,consensus_sequence,reorder=False)
 
@@ -274,7 +286,7 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
       st.write(table_w_sequence_and_count)
       st.download_button(label='dendrogram ordered sequences',data=convert_df(table_of_sequences_with_clusters_and_features),file_name='dendrogramordered.csv',mime='text/csv')
       st.download_button(label='subclones',data=convert_df(table_w_sequence_and_count),file_name='subclonetable_'+str(fr)+'.csv',mime='text/csv') 
-
+      
     return [sum(counts),table_w_sequence_and_count]
 
 def make_seq(length=40):    
