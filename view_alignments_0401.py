@@ -287,7 +287,7 @@ def view_alignment(aln, useconsensus,fr,fontsize="9pt", plot_width=1500,see_seq=
       st.download_button(label='dendrogram ordered sequences',data=convert_df(table_of_sequences_with_clusters_and_features),file_name='dendrogramordered.csv',mime='text/csv')
       st.download_button(label='subclones',data=convert_df(table_w_sequence_and_count),file_name='subclonetable_'+str(fr)+'.csv',mime='text/csv') 
       
-    return [sum(counts),table_w_sequence_and_count]
+    return [sum(counts),table_w_sequence_and_count, table_of_sequences_with_clusters_and_features]
 
 def make_seq(length=40):    
     return ''.join([random.choice(['A','C','T','G']) for i in range(length)])

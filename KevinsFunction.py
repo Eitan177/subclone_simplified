@@ -249,11 +249,13 @@ def new_metrics(data):
 
 def add_in_outlier_from_suspicious_mismatch(data, outliers_list):
     suspicious_mismatch_results = data['suspicious_mismatch'].tolist()
-    
-    smoothed_results = savgol_filter(suspicious_mismatch_results, window_length=np.min((len(suspicious_mismatch_results), 5)), polyorder=1)
+    if np.min((len(suspicious_mismatch_results) + len(suspicious_mismatch_results) % 2 - 1)) != 1:
+        smoothed_results = savgol_filter(suspicious_mismatch_results, window_length=np.min((len(suspicious_mismatch_results) + len(suspicious_mismatch_results) % 2 - 1, 5)), polyorder=1)
+    else:
+        smoothed_results = savgol_filter(suspicious_mismatch_results, window_length=np.min((len(suspicious_mismatch_results) + len(suspicious_mismatch_results) % 2 - 1, 5)), polyorder=0)
     peaks, properties = find_peaks(smoothed_results, prominence=1)
     # Generates out plot for analysis
-    print(smoothed_results)
+    #print(smoothed_results)
     #fig, ax = plt.subplots()
     #ax.pyplot(list(np.arange(0, len(smoothed_results))), smoothed_results)
     #ax.pyplot(list(np.arange(0, len(smoothed_results))), suspicious_mismatch_results)
@@ -304,8 +306,11 @@ def outlier_detection(file):
     """
 
     outlier_from_number_observed = data_with_new_metrics['numberobserved'].tolist()
-    
-    smoothed_results = savgol_filter(outlier_from_number_observed, window_length=np.min((len(outlier_from_number_observed),31)), polyorder=1)
+    #print(len(outlier_from_number_observed))
+    if np.min((len(outlier_from_number_observed) + len(outlier_from_number_observed) % 2 - 1, 31)) != 1:
+        smoothed_results = savgol_filter(outlier_from_number_observed, window_length=np.min((len(outlier_from_number_observed) + len(outlier_from_number_observed) % 2 - 1, 31)), polyorder=1)
+    else:
+        smoothed_results = savgol_filter(outlier_from_number_observed, window_length=np.min((len(outlier_from_number_observed) + len(outlier_from_number_observed) % 2 - 1, 31)), polyorder=0)
     peaks, properties = find_peaks(smoothed_results, prominence=1)
     # Generates out plot for analysis
     # print(smoothed_results)
@@ -335,7 +340,7 @@ def outlier_detection(file):
         outliers_list[outlier_count] = 1
     for outlier_count in df_with_deletion_sequenceNotFormatted['sequenceNotformatted'].index.tolist():
         outliers_list[outlier_count] = 1
-    
+
     outliers_list = add_in_outlier_from_suspicious_mismatch(data_with_new_metrics, outliers_list)
     data['outliers'] = outliers_list
     outlier_sequential = []
@@ -378,7 +383,7 @@ def partition(data, outliers, outlier_type):
         best_outlier_position = -1
         outlier_seq_pos = 2 * len(sequences)
         sequence_no_dash = sequence.replace("-", "")
-        
+
         for outlier_count in range(len(initial_outlier_class_corresponding_sequence)):
             alignments = pairwise2.align.globalms(sequence_no_dash, initial_outlier_class_corresponding_sequence[outlier_count].replace("-", ""), 1, -1, -1, 0, score_only=True)
             if len(sequence_no_dash) - alignments < outlier_score:
@@ -442,7 +447,7 @@ def partitionV2(data, outliers, outlier_type, variantoutliers):
                                                   variantoutliers[outlier_count].replace(
                                                       "-", "-"), 1, -1, -1, 0, score_only=True)
 
-            if alignments != []:                                        
+            if alignments != []:
                 if len(sequence_no_dash) - alignments < outlier_score:
                     outlier_score = len(sequence_no_dash) - alignments
                     best_outlier_position = initial_outlier_class[outlier_count]
@@ -525,7 +530,8 @@ def process_fasta_from_ebi(fasta_file_path, data):
 def KevinsFunction(table_of_sequences):
     table_of_sequences['inserts']=table_of_sequences['inserts'].apply(lambda x: str(x))
     data, found_outlier, outlier_type = outlier_detection(table_of_sequences)
-    outlierseq = data[data[['outliers', 'somatic_mutations']].apply(lambda x: x[0] == 1 and x[1] == 0, axis=1)].sequence.apply(lambda x: Seq(x))
+    """
+   outlierseq = data[data[['outliers', 'somatic_mutations']].apply(lambda x: x[0] == 1 and x[1] == 0, axis=1)].sequence.apply(lambda x: Seq(x))
     outlierseqlist = outlierseq.tolist()
     print(outlierseqlist)
     
@@ -547,8 +553,9 @@ def KevinsFunction(table_of_sequences):
 
     outlierseqmutated = outlierseq.apply(lambda x: ''.join([str(x)[i] for i in mutated_positions])).tolist()
     data['variantseq'] = seq_onlymutated
+    outlierseqmutated = outlierseq.apply(lambda x: ''.join([str(x)[i] for i in mutated_positions])).tolist()
+    """
     v_gene_data = process_fasta_from_ebi('Vs.fasta', data)
-    
-    partitioned_data = partitionV2(v_gene_data, found_outlier, outlier_type, outlierseqmutated)
-    
+    #partitioned_data = partitionV2(v_gene_data, found_outlier, outlier_type, outlierseqmutated)
+    partitioned_data = partition(v_gene_data, found_outlier, outlier_type)
     return(partitioned_data)

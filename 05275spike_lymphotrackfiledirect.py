@@ -330,12 +330,15 @@ class subclone:
             part1, aln1 = self.get_partclus_and_aln(self.clust_clone,self.fr_clone,self.abundant_seqfr)            
         
         if len(aln1)>1:
-            tallysum, subcloneseqsfr=view_alignment(aln1, self.abundant_seqfr,self.fr) 
+            tallysum, subcloneseqsfr, subclone_full_table =view_alignment(aln1, self.abundant_seqfr,self.fr)
             self.fr_total = tallysum
             self.fr_subcloneseqs=subcloneseqsfr
 
-
-
+            # Subcloneseqsfr is where each framework dataframe resides
+            all_subclone_tables.append(subclone_full_table)
+        else:
+            all_subclone_tables.append(pd.DataFrame(columns=['sequence']))
+all_subclone_tables = []
 
 if detectormerge == 'Detect and quantify subclones in one framework' and  submit_button2: #seq_file3a is not None and fr3_clone2 != '':
     
@@ -359,4 +362,27 @@ if detectormerge == 'Detect and quantify subclones in one framework' and  submit
 elif files_to_merge is not None:
     resultsmerged_obj=merge_files(files_to_merge)
 
- 
+
+def merge():
+    # Merging Steps: Need information about number of frameworks and number of replicates
+    number_of_frameworks = len(frameworks)
+    number_of_replicates = replicate_count
+    # Merge between replicates
+    for rep_count_1 in range(0, number_of_replicates):
+        for rep_count_2 in range(rep_count_1, number_of_replicates):
+            st.write('Replicate ' + str(rep_count_1 + 1) + ' Merge With Replicate ' + str(rep_count_2 + 1))
+            outliers_inter_allele_1 = []
+            outliers_inter_allele_2 = []
+            current_allele_1_count = rep_count_1
+            current_allele_2_count = rep_count_2
+            for framework_count in range(number_of_frameworks):
+                outliers_inter_allele_1.extend(all_subclone_tables[current_allele_1_count + number_of_replicates * framework_count]['sequence'].tolist())
+                outliers_inter_allele_2.extend(all_subclone_tables[current_allele_2_count + number_of_replicates * framework_count]['sequence'].tolist())
+            if len(outliers_inter_allele_1) == 0 or len(outliers_inter_allele_2) == 0:
+                st.write("No Comparison Possible. At least one group does not have outliers found")
+            else:
+                Kevinsmerge(outliers_inter_allele_1, outliers_inter_allele_2)
+
+
+if all_subclone_tables:
+    merge()
